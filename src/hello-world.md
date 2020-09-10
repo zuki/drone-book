@@ -1,14 +1,13 @@
 # Hello, world!
 
-In the previous chapter we created a debug probe from a Blue Pill, and attached
-it to another Blue Pill board. In this chapter we will run our first Drone
-program on the microcontroller.
+前の章ではBlue Pillでデバッグプローブを作成し、別のBlue Pillに接続しました。
+この章では、このマイクロコントローラ上で初めてのDroneプログラムを実行します。
 
 ## Rust
 
-If you haven't installed Rust yet, follow the instructions from
-[rustup.rs](https://rustup.rs/). Drone is currently available only for Nightly
-channel of Rust. You need to install it first:
+まだRustをインストールされていない場合は、[rustup.rs](https://rustup.rs/)
+からインストールしてください。Droneは現在のところ、NightlyチャンネルのRustで
+しか利用できません。まず、以下をインストールする必要があります。
 
 ```shell
 $ rustup toolchain install nightly \
@@ -16,74 +15,77 @@ $ rustup toolchain install nightly \
       -t thumbv7m-none-eabi
 ```
 
-Not all nightly releases have all components available. The above command will
-walk backwards in time to find the most recent release with all needed
-components.
+すべてのnightlyリリースですべてのコンポーネントが利用できるわけではありません。
+上記のコマンドは必要なコンポーネントがすべて利用できる最新のリリースを時間を遡って
+探して行きます。
 
-## `just` command
+## `just` コマンド
 
-In embedded development often there are various project-specific tasks that are
-needed to run from time to time. Therefore we encourage using an excellent Rust
-crate [`just`](https://github.com/casey/just):
+組込み開発では、時々実行する必要のある様々なプロジェクト固有のタスクがある
+場合がしばしばあります。そのため、優れたRustクレートである
+[`just`](https://github.com/casey/just)の使用をお勧めします。
+
 
 ```shell
 $ cargo +stable install just
 ```
 
-Just is a command runner inspired by `make`. Whenever you see a project with
-`Justfile` at the root, run `just --list` to see all available
-commands. Furthermore `drone new` command will generate a `Justfile` for you. It
-is advisable to put `alias j="just"` to your shell config, so you could just
-type `j` instead of `just`.
+Justは`make`にインスパイアされたコマンドランナーです。プロジェクトのルートに
+`Justfile`がある場合はいつでも`just --list`を実行すると、利用可能なすべての
+コマンドを知ることができます。さらに、`drone new`コマンドは`Justfile`を
+生成します。シェルの設定に`alias j="just"`を加えることをお勧めします。
+そうすれば、`just`ではなく`j`とタイプするだけですみます。
 
-## `drone` command
 
-The Drone OS project consists of many Rust crates. However there is a single
-entry point for it - the `drone` command-line utility:
+## `drone`コマンド
+
+Drone OSプロジェクトは多くのRustクレートで構成されています。しかし、そのための
+入り口が一つあります。`drone`コマンドラインユーティリティです。
 
 ```shell
 $ cargo +nightly install drone
 ```
 
-For now you should have all prerequisites and could follow to the next step -
-generating your first Drone crate.
+これで事前に必要なものはすべて整いましたので、次の段階に進めることができます。
+初めてのDroneクレートの作成です。
 
-## New project
+## 新規プロジェクト
 
-Let's tell `drone` to generate a new Drone crate for us. We have to specify the
-target MCU family, which is `stm32f103` for Blue Pill, the flash memory size,
-the RAM size, and the project name.
+`drone`に新規Droneクレートを作成するよう伝えましょう。ここでは。ターゲットと
+なるMCUファミリー（Blue Pillでは`stm32f103`）、フラッシュメモリーサイズ、
+RAMサイズとプロジェクト名を指定する必要があります。
 
 ```shell
 $ drone new --device stm32f103 --flash-size 128K --ram-size 20K hello-world
 $ cd hello-world
 ```
 
-The first thing to do inside the project is to install dependencies:
+プロジェクトの中で最初に行うことは依存クレートのインストールです。
 
 ```shell
 $ just deps
 ```
 
-You should also run this task after each Rust update.
+Rustを更新したあとにもいつもこのタスクを実行するべきです。
 
-Now we assume you have the Blue Pills connected as follows (as described in the
-previous chapter):
+ここでは（先の章で説明したように）次のように2つのBlue Pillを接続したと
+仮定します。
 
 ![BMP wiring](./assets/bmp-wiring.jpg)
 
-Let's flash our newly created project to the target Blue Pill. If it has to be
-built first, it could take a while:
+新たに作成したプロジェクトをターゲットとなるBlue Pillに書き込みましょう。
+初めてビルトする際には時間がかかる場合があります。
+
 
 ```shell
 $ just flash
 ```
 
-A successful result looks like this:
+成功した場合は、次のようになります。
 
 ![Flash success](./assets/just-flash.png)
 
-And finally, check the SWO output from the device.
+最後に、デバイスからのSWO出力をチェックしてください。
 
 ```shell
 $ just log
@@ -91,5 +93,5 @@ $ just log
 
 ![SWO output](./assets/just-swo.png)
 
-If you see an output like above, congratulations! You have successfully set up
-an environment for developing Drone projects.
+出力が上のようになっていたら、おめでとうございます。Droneプロジェクトの開発環境が
+正しく設定されています。
