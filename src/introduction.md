@@ -1,74 +1,59 @@
-# Introduction
+# 序章
 
-Drone is an Embedded Operating System for writing real-time applications in
-Rust. It aims to bring modern development approaches without compromising
-performance into the world of embedded programming.
+DroneはRustでリアルタイムアプリケーションを書くための組み込みオペレーティングシステムです。現代的な開発アプローチをパフォーマンスに妥協することなく組み込みプログラミングの世界に持ち込むことを目的としています。
 
-## Supported hardware
+## サポートされているハードウェア
 
-Drone core is platform-agnostic from the beginning. However currently only ARM®
-Cortex®-M3/M4 is supported.
+Droneコアは当初からプラットフォームには依存していません。しかし、現在はARM® Cortex®-M3/M4だけがサポートされています。
 
-Drone also have special support for [Black Magic Probe](http://black-magic.org/)
-in form of `drone bmp` commands. But it doesn't restrict you from using any
-other debug probes.
+Droneは、`drone bmp`というコマンドの形で[Black Magic Probe](http://black-magic.org/)を特別にサポートしています。しかし、他のデバッグプローブの使用を制限するものではありません。
 
-## Design principles
+## 設計原理
 
-- *Energy effective from the start*. Drone encourages interrupt-driven execution
-  model.
+- *最初からエネルギー効率の良さ*。Droneは割り込み駆動の実行モデルを奨励します。
 
-- *Hard Real-Time*. Drone relies on atomic operations instead of using critical
-  sections.
+- *ハードリアルタイム*。Droneは、クリティカルセクションの使用ではなくアトミックオペレーションに依存します。
 
-- *Fully preemptive multi-tasking with strict priorities*. A higher priority
-   task takes precedence with minimal latency.
+- *厳密な優先順位を持つ完全なプリエンプティブマルチタスク*。優先度の高いタスクのレイテンシが最小になるよう優先されます。
 
-- *Highly concurrent.* Multi-tasking in Drone is very cheap, and Rust ensures it
-  is also safe.
+- *高度な並行処理*。Droneのマルチタスクは非常に安価であり、Rustにより安全性も保証されます。
 
-- *Message passing concurrency*. Drone ships with synchronization primitives out
-  of the box.
+- *メッセージパッシングの並行処理*。Droneは同期処理プリミティブを提供します。
 
-- *Single stack by default*. Drone concurrency primitives are essentially
-  stack-less state machines. But *stackful tasks are still supported*.
+- *デフォルトではシングルスタック*。Droneの並行処理プリミティブは、基本的にはスタックレスのステートマシンです。しかし、*スタックフルなタスクもサポートされています*。
 
-- *Dynamic memory enabled*. Drone lets you use convenient data structures like
-  mutable strings or vectors while still staying deterministic and code
-  efficient.
+- *ダイナミックメモリが可能*。Droneは、決定論的でコード効率の良い状態を維持しながらも、可能文字列やベクタのような便利なデータ構造を使用できます。
 
-## Why use Drone?
+## 何故、Droneを使うのか？
 
-- Async/await by default. Drone provides all required run-time to use native
-  async/await syntax and execute `Future`s.
+- async/awaitがデフォルト。Droneは、ネイティブのasync/await構文を使用し、`Futures`を
+  実行するために必要なすべてのランタイムを提供します。
 
-- Doesn't require `unsafe` code. In spite of the fact that Drone core inevitably
-  relies on `unsafe` code, Drone applications can fully rely on the safe
-  abstractions provided by Drone.
+- `unsafe`コードが不要。Droneコアは`unsafe`コードに依存せざるを得ないという事実はありますが、
+  Droneアプリケーションは、Droneが提供する安全な抽象化に完全に依存することができます。
 
-- Modern tooling. Apart from standard Rust tools like `cargo` package manager,
-  `rustfmt` code formatter, `clippy` code linter, Drone provides `drone`
-  command-line utility which can generate a new Drone project for your hardware,
-  or manage your debug probe.
+- 現代的なツール。`cargo`パッケージマネージャや`rutfmt`コードフォーマッタ、`clippy`コード
+  リンタなどの標準的なRustツールとは別に、Droneは`drone`コマンドラインユーティリティを提供
+  しています。これにより、ハードウェア用の新規Droneプロジェクトの生成やデバッグプローブの管理を
+  することができます。
 
-- Primary stack is stack-overflow protected regardless of MMU/MPU presence. But
-  secondary stackful tasks require MMU/MPU to ensure the safety.
+- 一次スタックはMMU/MPUの存在に関わらずスタックオーバーフローから保護。ただし、二次スタック
+  を使用するタスクは安全性の確保のためにMMU/MPUを必要とします。
 
-- Debug communication channels. Rust's `print!`, `eprint!` and similar macros
-  are mapped to Cortex-M's SWO channels 0 and 1 out of the box. Debug messages
-  incur no overhead when no debug probe is connected.
+- デバッグ用通信チャンネル。Rustの`print!`や`eprint!`、これと同等なマクロが、Cortex-Mの
+  SWOのチャネル0とチャネル1にマップされています。デバッグプローブが接続されていない場合、
+  デバッグメッセージはオーバーヘッドを発生させません。
 
-- `Drone.toml` configuration file, which saves you from manually writing linker
-  scripts.
+- `Drone.toml`設定ファイル。リンカスクリプトを手で書く手間が省けます。
 
-- Rich and safe zero-cost abstractions for memory-mapped registers. Drone
-  automatically generates register bindings from vendor-provided SVD files. It
-  also provides a way to write code generic over similar peripherals.
+- メモリマップドレジスタのための豊富で安全なゼロコスト抽象化。Droneはベンダー提供のSVD
+  ファイルからレジスタバインディングを自動的に生成します。また、類似したペリフェラルに対して
+  汎用的なコードを書く方法も提供します。
 
-## What Drone doesn't
+## Droneは何をしないか
 
-- Drone doesn't support loading dynamic applications. It is a library OS and is
-  linked statically with its application.
+- Droneは動的アプリケーションの読み込みには対応しません。ライブラリOSであり、アプリケーションに
+  静的にリンクされます。
 
-- Drone doesn't implement time-slicing. It has a different execution model, but
-  optional time-slicing may be added in the future.
+- Droneはタイムスライシングを実装しません。実行モデルが異なります。ただし、将来的には
+  オプションのタイムスライシングが追加されるかもしれません。
