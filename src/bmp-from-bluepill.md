@@ -1,11 +1,11 @@
-# Black Magic Probe from a Blue Pill
+#  Blue PillをBlack Magic Probeにする
 
-This chapter describes the process of making a Black Magic Probe from a Blue
-Pill board. The steps were tested on Ubuntu 18.04.3 LTS and Arch Linux 5.3.7.
+この章ではBlue PillボードからBlack Magic Probeを作成する過程を説明します。
+この過程は、Ubuntu 18.04.3 LTSとArch Linux 5.3.7でテスト指定しています。
 
-## Preparation
+## 準備
 
-The process requires the following packages to be installed:
+この過程には次のパッケージがインストールされている必要があります。
 
 ```shell
 $ sudo apt install build-essential \
@@ -18,7 +18,7 @@ $ sudo apt install build-essential \
                    python-pip
 ```
 
-or on Arch Linux:
+Arch Linuxでは次の通り。
 
 ```
 $ sudo pacman -S curl \
@@ -30,29 +30,30 @@ $ yaourt -S arm-none-eabi-gcc \
             gdb-multiarch
 ```
 
-It is convenient to join the `dialout` group. This way you will not need
-super-user privileges to work with BMP and USB-to-UART adapter:
+`dialout` グループのメンバーになっていると便利です。そうすると、BMPや
+USB-to-UARTアダプタを使用する際にスーバーユーザ権限が不要になるからです。
 
 ```shell
 $ sudo adduser $(id -un) dialout
 ```
 
-or the `uucp` group on Arch Linux:
+Arch Linuxの場合は`uucp`グループに追加します。
 
 ```shell
 $ sudo gpasswd -a $(id -un) uucp
 ```
 
-In order for the group change to take effect, you will need to re-login.
+グループの変更を有効にするために再ログインが必要になるかもしれません。
 
-Get the stm32loader script and install its python dependencies:
+stm32loaderスクリプトを入手し、その実行に必要なpythonライブラリを
+インストールします。
 
 ```shell
 $ git clone https://github.com/jsnyder/stm32loader
 $ pip install pyserial
 ```
 
-Get the BMP firmware:
+BMPファームウェアを入手します。
 
 ```shell
 $ git clone https://github.com/blacksphere/blackmagic
@@ -60,19 +61,19 @@ $ cd blackmagic
 $ git submodule update --init --recursive
 ```
 
-BMP repository provides udev rules for the probe. The rules instruct udev to
-symlink the GDB endpoint to `/dev/ttyBmpGdb` and the UART to
-`/dev/ttyBmpTarg`. Also they allow to upgrade BMP firmware without super-user
-permissions.
+BMPリポジトリはこのプローブ用のudev規則を提供しています。規則は、udevに
+GDBエンドポイントには`/dev/ttyBmpGdb`を、UARTには`/dev/ttyBmpTarg`を
+シンボリックリンクするよう命令しています。また、スーパーユーザ権限なしに
+BMPフィームウェアのアップデートができるように許可しています。
 
 ```shell
 $ sudo cp driver/99-blackmagic.rules /etc/udev/rules.d/
 $ sudo udevadm control --reload-rules
 ```
 
-## Building
+## ビルド
 
-Correct probe host should be selected. In our case it's `swlink`.
+正しいプローブホストを選択する必要があります。ここでは、`swlink`です。
 
 ```shell
 $ make PROBE_HOST=swlink
@@ -80,14 +81,14 @@ $ make PROBE_HOST=swlink
 
 ![Building](./assets/blackmagic-make.png)
 
-This will produce two binaries we are interested in: `src/blackmagic_dfu.bin`
-and `src/blackmagic.bin`. The first is a bootloader, which will be flashed with
-the USB-to-UART adapter. And the second is the actual firmware, which will be
-loaded through USB with help of the bootloader.
+これにより2つのバイナリ`src/blackmagic_dfu.bin`と`src/blackmagic.bin`が
+生成されます。前者はブートローダであり、USB-to-UARTアダプタで書き込むものです。
+後者は実際のファームウェアであり、ブートローダの助けを借りてUSB経由でロードする
+ものです。
 
-## Flashing Bootloader
+## ブートローダの書き込み
 
-1. Connect the USB-to-UART adapter with the Blue Pill according to this table:
+1. 次の表に従い、USB-to-UARTアダプタをBlue Pillに接続します。
 
    | USB-to-UART | Blue Pill |
    |-------------|-----------|
@@ -95,34 +96,33 @@ loaded through USB with help of the bootloader.
    | RXD         | A9        |
    | TXD         | A10       |
 
-   **Warning:** Don't connect any power source now. We will power up the board
-   through USB at the step 5. Using USB together with 5V or 3.3 pins can damage
-   your board.
+   **警告:** まだ電源を接続しないでください。手順5で、USBを通じてボードに電源を
+   供給します。5Vまたは3.3VピンとUSBを併用すると、ボードにダメージを与える
+   可能性があります。
 
-2. Set the jumper on the USB-to-UART adapter to the position where VCC and 3V3
-   are shorted. This will set the adapter's output voltage to 3.3 v. Although it
-   is not strictly needed, because A9 and A10 pins are five-volt-tolerant.
+2. USB-to-UARTアダプタのジャンパをVCCと3V3がショートする位置に設定します。
+   これにより、アダプタの出力電圧が3.3Vに設定されます。A9ピンとA10ピンは5ボルト
+   耐圧なので厳密にはこれは不要です。
 
-3. Set BOOT0 jumper on the Blue Pill to 1 to boot into the factory programmed
-   bootloader. The bootloader is responsible for programming the board through
-   UART.
+3. Blue PillのBOOT0ジャンパを1に設定して、工場出荷時にプログラムされたブート
+   ローダからブートするようにします。このブートローダはUART経由でボードを
+   プログラミングする役割を果たします。
 
 ![CH340G connected to Blue Pill](./assets/bluepill-ch340g.jpg)
 
-4. Before connecting the USB-to-UART adapter to your PC, open the system
-   journal:
+4. USB-to-UARTアダプタをPCに接続する前に、システムジャーナルファイルを開きます。
 
    ```shell
    $ journalctl -f
    ```
 
-   Connect the USB-to-UART adapter and notice the name it is assigned:
+   USB-to-UARTアダプタを接続すると、それに付与された名前がわかります。
 
 ![CH340G in journal](./assets/ch340g-journal.png)
 
-5. Connect a USB-cable to the Blue Pill and start the flashing process. Replace
-   `/dev/ttyUSB0` with your value from the previous step. If the process is not
-   starting, press the reset button on the Blue Pill.
+1. USBケーブルをBlue Pillに接続し、書き込みを開始します。`/dev/ttyUSB0`は
+   手順4で調べた名前に置き換えてください。処理が始まらない場合は、Blue Pillの
+   リセットボタンを押下してください。
 
    ```shell
    $ ../stm32loader/stm32loader.py -p /dev/ttyUSB0 -e -w -v src/blackmagic_dfu.bin
@@ -130,14 +130,14 @@ loaded through USB with help of the bootloader.
 
 ![Successful load](./assets/stm32loader.png)
 
-6. Set BOOT0 jumper on the Blue Pill back to 0.
+1. Blue PillのBOOT0ジャンパを0に戻します。
 
 ![Reset Blue Pill jumpers](./assets/bluepill-jumpers.jpg)
 
-## Flashing Firmware
+## ファームウェアの書き込み
 
-Now you can disconnect the USB-to-UART adapter from the Blue Pill and your
-PC. The firmware will be flashed through USB port:
+この段階で、USB-to-UARTアダプタをBlue PillとPCから外すことができます。
+ファームウェアはUSBポート経由で書き込みます。
 
 ```shell
 $ dfu-util -d 1d50:6018,:6017 -s 0x08002000:leave -D src/blackmagic.bin
@@ -145,13 +145,13 @@ $ dfu-util -d 1d50:6018,:6017 -s 0x08002000:leave -D src/blackmagic.bin
 
 ![Successful load](./assets/dfu-util.png)
 
-Now we will check that it works. Reconnect the Blue Pill and open a GDB session:
+稼働するかチェックします。Blue Pillを再接続し、GDBセッションを開きます。
 
 ```shell
 $ gdb-multiarch
 ```
 
-At the GDB prompt enter the following commands:
+GDBのプロンプトで次のコマンドを入力します。
 
 ```text
 target extended-remote /dev/ttyBmpGdb
@@ -160,14 +160,13 @@ monitor version
 
 ![GDB check](./assets/gdb-monitor-version.png)
 
-If your output is similar to the output above, congratulations! Now your Blue
-Pill is a Black Magic Probe! Next time you need to upgrade the firmware you only
-need to repeat the `dfu-util` command above.
+出力が上のようになったら、おめでとう。これであなたのBlue PillはBlack Magic
+Probeになりました。次回、ファームウェアのアップグレードが必要な時には、上の
+`dfu-util`コマンドを再実行するだけです。
 
-## Wiring
+## ワイヤリング
 
-Here is a general pin-out description and an example connection with a Blue
-Pill:
+以下は一般的なピンアウトの説明とBlue Pillとの接続例です。
 
 | Black Magic Probe | Function            | Blue Pill Target |
 |-------------------|---------------------|------------------|
@@ -183,17 +182,17 @@ Pill:
 
 ![BMP wiring](./assets/bmp-wiring.jpg)
 
-## Comparison with Official BMP
+## 公式BMPとの比較
 
 ![Blue Pill and Official BMP](./assets/official-bmp-comparison.jpg)
 
-There are a few advantages of the official BMP:
+公式BMPには利点がいくつかあります。There are a few advantages of the official BMP:
 
-- Has a Cortex Debug connector
-- Can power the target
-- Can sense the target's voltage
-- Has more LEDs
-- Has more robust circuitry
+- Cortexデバッグコネクタの搭載
+- ターゲットへの給電が可能
+- ターベット電圧の感知が可能
+- より多くのLED
+- より堅牢な回路
 
-These advantages are not critical, however by buying the official hardware you
-are supporting the BMP project.
+これらの利点は重大なものではありません。しかし、公式のハードウェアを購入する
+ことによりBMPプロジェクトをサポートすることができます。
