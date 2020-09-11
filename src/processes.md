@@ -1,17 +1,17 @@
-# Processes
+# プロセス
 
-Processes in Drone OS are special kind of fibers, that can be suspended with a
-special blocking call. They use dedicated dynamically allocated stacks. On
-Cortex-M platform, Drone implements processes using `SVC` assembly instruction
-and SVCall exception. So before using processes, a Drone supervisor should be
-added to the project.
+Drone OSのプロセスは特別なブロッキングコールで中断することができる特殊な種類の
+ファイバです。プロセスは動的に割り当てられた専用のスタックを使用します。
+Cortex-Mプラットフォームにおいて、Droneは`SVC`アセンブリ命令とSVCall例外を
+使ってプロセスを実装しています。そのため、プロセスを使用する前に、Droneスーパー
+バイザをプロジェクトに追加する必要があります。
 
-## Supervisor
+## スーパバイザ
 
-Create a new file at `src/sv.rs` with the following content:
+次の内容の新規ファイルを`src/sv.rs`に作成します。
 
 ```rust
-//! The supervisor.
+//! スーパバイザ.
 
 use drone_cortexm::{
     sv,
@@ -19,10 +19,10 @@ use drone_cortexm::{
 };
 
 sv! {
-    /// The supervisor type.
+    /// スーパバイザ型.
     pub struct Sv;
 
-    /// The array of services.
+    /// サービスの配列.
     static SERVICES;
 
     SwitchContextService;
@@ -30,40 +30,39 @@ sv! {
 }
 ```
 
-And register the newly created module in the `src/lib.rs`:
+そして、新規作成したモジュールを`src/lib.rs`に登録します。
 
 ```rust
 pub mod sv;
 ```
 
-Update `thr::vtable!` macro inside `src/thr.rs` as follows:
+`src/thr.rs`にある`thr::vtable!`マクロを次のように変更します。
 
 ```rust
 use crate::sv::Sv;
 
 thr::vtable! {
     use Thr;
-    use Sv; // <-- register the supervisor type
+    use Sv; // <-- スーパバイザ型を登録
 
-    // ... The types definitions are skipped ...
+    // ... 型定義はスキップ ...
 
-    // --- Allocated threads ---
+    // --- 割り当て済みのスレッド ---
 
-    /// All classes of faults.
+    /// 全フォールトクラス.
     pub HARD_FAULT;
-    /// System service call.
-    fn SV_CALL; // <-- add a new external interrupt handler
+    /// システムサービスコール.
+    fn SV_CALL; // <-- 新規外部割り込みハンドラを追加
 }
 ```
 
-And also you will need to update your `src/bin.rs` to attach an external handler
-for SVCall:
+また、SVCall用の外部ハンドラをアタッチするために`src/bin.rs`を変更する必要があります。
 
 ```rust
 use drone_cortexm::sv::sv_handler;
 use CRATE_NAME::sv::Sv;
 
-/// The vector table.
+/// ベクタテーブル.
 #[no_mangle]
 pub static VTABLE: Vtable = Vtable::new(Handlers {
     reset,
@@ -71,9 +70,9 @@ pub static VTABLE: Vtable = Vtable::new(Handlers {
 });
 ```
 
-## Using processes
+## プロセスを使用する
 
-First, let's recall the generator fiber example from the previous chapter:
+まず、前章のジェネレータファイバの例を思い出しましょう。
 
 ```rust
 use core::pin::Pin;
@@ -96,7 +95,7 @@ assert_eq!(Pin::new(&mut fiber).resume(()), FiberState::Yielded(3));
 assert_eq!(Pin::new(&mut fiber).resume(()), FiberState::Complete(3));
 ```
 
-This fiber can be rewritten using Drone process as follows:
+このファイバはDroneプロセスを使って次のように書き換えることができます。
 
 ```rust
 use crate::sv::Sv;
@@ -120,23 +119,22 @@ assert_eq!(Pin::new(&mut fiber).resume(()), FiberState::Yielded(3));
 assert_eq!(Pin::new(&mut fiber).resume(()), FiberState::Complete(3));
 ```
 
-The difference is that the code inside the closure argument is fully
-synchronous. The `proc_yield` call is translated to the `SVC` assembly
-instruction. This instruction immediately switches the execution context back to
-the caller. When the `resume` method of the process is called, it continues from
-the last yield point, just like a generator.
+違いは、クロージャ引数の内部コードが完全に同期化されていることです。`proc_yield`
+コールは`SVC`アセンブリ命令に変換されます。この命令は実行コンテキストを直ちに再び
+呼び出し元に切り替えます。プロセスの`resume`メソッドが呼び出されると、ジェネレータ
+と同じように最後のyield点から継続します。
 
-The `fib::new_proc` function takes a stack size as the first argument. The stack
-will be immediately allocated from the heap. To make this function safe, the
-processor's MPU used to protect the stack from a possible overflow. On
-processors without MPU, like STM32F103, this function will panic. However it is
-still possible to use processes on such systems, though without any guarantees
-about stack overflows. You can use `new_proc_unchecked` function, which is
-marked `unsafe`.
+`fib::new_proc`関数は、スタックサイズを第一引数に取ります。スタックはすぐに
+ヒープから確保されます。この関数を安全にするために、オーバーフローの可能性から
+スタックを保護するためにプロセッサのMPUが使用されます。STM32F103のようなMPUを
+持たないプロセッサでは、この関数はパニックになります。しかし、スタックオーバー
+フローに関する保証はありませんが、そのようなシステムでもプロセスを使用することは
+可能です。`unsafe`とマークされている`new_proc_unchecked`関数を使うことが
+できます。
 
-Unlike generators, a process can take input data. And unlike `yield` keyword,
-the `proc_yield` function not necessarily returns `()`. Here is an example of
-such process:
+ジェネレータとは異なり、プロセスは入力データを受け取ることができます。また、
+`yield`キーワードとは異なり、`proc_yield`関数は必ずしも`()`を返すわけでは
+ありません。以下にそのようなプロセスの例を示します。
 
 ```rust
 let mut fiber = fib::new_proc::<Sv, _, _, _, _>(128, |input, yielder| {
