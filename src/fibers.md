@@ -1,8 +1,8 @@
-# Fibers
+# ファイバ
 
-Fibers in Drone OS are essentially finite-state machines. On type level, a fiber
-is an instance of an anonymous type, which implements the `Fiber` trait. The
-trait is defined at `drone_core::fib` as follows:
+Drone OSのファイバは本質的に有限状態マシンです。ファイバは、型レベルでいえば
+`Fiber`トレイトを実装している無名型のインスタンスです。このトレイとは
+`drone_core::fib`で次のように定義されています。
 
 ```rust
 pub trait Fiber {
@@ -22,13 +22,13 @@ pub enum FiberState<Y, R> {
 }
 ```
 
-`Fiber` and `FiberState` are similar to `Generator` and `GeneratorState` from
-`core::ops`, but with addition of the input parameter. Also like generators, it
-is invalid to resume a fiber after completion.
+`Fiber`と`FiberState`は`core::ops`の`Generator`と`GeneratorState`に
+似ていますが、入力パラメータが追加されています。また、ジェネレータ同様、完了後に
+ファイバを再開することは不正です。
 
-A fiber can be created in multiple ways using `drone_cortexm::fib::new_*` family
-of constructors. For example a fiber that completes immediately upon resumption
-can be created from an `FnOnce` closure:
+ファイバーは、`drone_cortexm::fib::new_*`ファミリのコンストラクタを使って
+複数の方法で作成することができます。例えば、再開後すぐに完了するファイバは
+`FnOnce`クロージャから作成することができます。
 
 ```rust
 use core::pin::Pin;
@@ -41,8 +41,8 @@ let mut fiber = fib::new_once(|| 4);
 assert_eq!(Pin::new(&mut fiber).resume(()), FiberState::Complete(4));
 ```
 
-A fiber that involves multiple yield points before completion can be created
-from an `FnMut` closure:
+完了までに複数のyield点を含むファイバは、`FnMut`クロージャから作成することが
+できます。
 
 ```rust
 let mut state = 0;
@@ -60,7 +60,7 @@ assert_eq!(Pin::new(&mut fiber).resume(()), FiberState::Yielded(3));
 assert_eq!(Pin::new(&mut fiber).resume(()), FiberState::Complete(3));
 ```
 
-Or an equivalent fiber can be created using Rust's generator syntax:
+また、同等なファイバをRustのジェネレータこうbンを使って作成することもできます。
 
 ```rust
 let mut fiber = fib::new(|| {
@@ -77,6 +77,5 @@ assert_eq!(Pin::new(&mut fiber).resume(()), FiberState::Yielded(3));
 assert_eq!(Pin::new(&mut fiber).resume(()), FiberState::Complete(3));
 ```
 
-The fibers described in this chapter are the main building blocks for Drone OS
-tasks. But there is one more type of fibers, which will be described in the next
-chapter.
+この章で説明したファイバは、Drone OSタスクの主要な構成要素です。しかし、ファイバ
+にはもう一種類あり、次の章で説明します。
