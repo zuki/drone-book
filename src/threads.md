@@ -1,88 +1,89 @@
-# Threads
+# スレッド
 
-A thread in Drone OS corresponds to a hardware interrupt. It is a sequence of
-fibers that managed independently by an interrupt controller. Threads can not be
-created on demand, but should be pre-defined for a particular project. Then any
-number of fibers can be attached dynamically to a particular thread.
+Drone OSのスレッドはハードウェア割り込みに相当します。割り込みコントローラにより
+独立に管理される一連のファイバです。スレッドは必要に応じて作成することはできません。
+特定のプロジェクト用にあらかじめ定義しておく必要があります。そうすれば、任意の数の
+ファイバを特定のスレッドに動的にアタッチすることができます。
 
-Threads should be defined at `src/thr.rs` using `thr!` and `thr::vtable!`
-macros:
+スレッドは`src/thr.rs`で`thr!`マクロと`thr::vtable!`マクロを使って定義する
+必要があります。
 
 ```rust
 thr::vtable! {
     use Thr;
 
-    /// The vector table type.
+    /// ベクタテーブル型.
     pub struct Vtable;
 
-    /// Explicit vector table handlers.
+    /// 明示的なベクタテーブルハンドラ.
     pub struct Handlers;
 
-    /// A set of thread tokens.
+    /// スレッドトークンのセット.
     pub struct Thrs;
 
-    /// The array of thread data.
+    /// スレッドデータの配列.
     static THREADS;
 
-    // --- Allocated threads ---
+    // --- 割り当て済みのスレッド ---
 
-    /// All classes of faults.
+    /// 全フォールトクラス.
     pub HARD_FAULT;
-    /// A thread for my task.
+    /// マイタスクのためのスレッド.
     pub 10: MY_THREAD;
 }
 
 thr! {
     use THREADS;
 
-    /// The thread data.
+    /// スレッドデータ.
     pub struct Thr {}
 
-    /// The thread-local storage.
+    /// スレッドローカルなストレージ.
     pub struct ThrLocal {}
 }
 ```
 
-The macros will define `THREADS` static array of `Thr` objects. In this example
-the array will contain three element: `HARD_FAULT`, `MY_THREAD`, and the
-implicit `RESET` thread data. `Thrs` structure is also created here, which is a
-zero-sized type, a set of tokens, through which one can manipulate the
-threads. This set of token can be instantiated only once, usually at the very
-beginning of the root task:
+マクロは`Thr`オブジェクトの静的配列である`THREADS`を定義します。この例では、
+配列には3つの要素が含まれています。`HARD_FAULT`と`MY_THREAD`、そして暗黙の
+`RESET`スレッドデータです。`Thrs`構造体もここで作成されますが、これは
+ゼロサイズ型のトークンセットであり、これを介してスレッドを操作することができます。
+このトークンセットは一度だけインスタンス化することができ、通常はルートタスクの
+一番はじめに行います。
 
 ```rust
-/// The root task handler.
+/// ルートタスクハンドラ.
 #[inline(never)]
 pub fn handler(reg: Regs, thr_init: ThrsInit) {
     let thr = thr::init(thr_init);
 
-    // ... The rest of the handler ...
+    // ... 他のハンドラ ...
 }
 ```
 
-Here the `thr` variable contains tokens for all defined threads. If you have
-added fields to the `Thr` definition, they are accessible through
-`thr.my_thread.to_thr()`. `ThrLocal` is also stored inside `Thr`, but accessible
-only through the `thr::local()` free-standing function.
+ここで`thr`変数には、定義されているすべてのスレッドのトークンが含まれています。
+`Thr`定義にフィールドを追加した場合は、`thr.my_thread.to_thr()`を通して
+アクセスできます。`ThrLocal`も`Thr`内に格納されますが、独立した関数である
+`thr::local()`を通じてのみアクセスできます。
 
-A thread can be called programmatically using implicit `core::task::Waker` or
-explicit `thr.my_thread.trigger()` or directly by hardware peripherals. If the
-thread, which was triggered, has a higher priority than the currently active
-thread, the active thread will be preempted. If the thread has a lower priority,
-it will run after all higher priority threads. Priorities can be changed on the
-fly with `thr.my_thread.set_priority(...)` method.
+スレッドは、暗黙的な`core::task::Waker`や明示的な`thr.my_thread.trigger()`
+を使用してプログラムから、あるいは直接ハードウェアペリフェラルから呼び出すことが
+できます。トリガされたスレッドの優先度が現在アクティブなスレッドよりも高い場合、
+アクティブなスレッドはプリエンプションされます。スレッドの優先度が低い場合は、
+優先度の高いすべてのスレッドの後に実行されます。優先度は
+`thr.my_thread.set_priority(...)`メソッドを使いその場で変更できます。
 
-## Fiber chain
+## ファイバチェイン
 
-The main thing a thread owns is a fiber chain. A fiber chain is essentially a
-linked list of fibers. A fiber can be added to a thread chain dynamically using
-`thr.my_thread.add_fib(...)`, or other methods based on it. The `add_fib` method
-is atomic, i.e. fibers can be added to a particular thread from other threads.
+スレッドが所有する主たるものはファイバチェインです。ファイバチェーンは基本的には
+ファイバのリンクドリストです。ファイバは`thr.my_thread.add_fib(...)`や
+それに基づく他のメソッドを使ってスレッドチェーンに動的に追加することができます。
+`add_fib`メソッドはアトミックなので他のスレッドからあるスレッドにファイバを
+追加することができます。
 
-When a thread is triggered, it runs the fibers in its fiber chain one-by-one in
-LIFO order. In other words the most recently added fiber will be executed
-first. A fiber can return `fib::Yielded` result, which means the fiber is paused
-but not completed; the thread will keep the fiber in place for the later run and
-proceed with the next fiber in the chain. Or the fiber can return
-`fib::Complete`, in which case the thread removes the fiber from the chain, runs
-its `drop` destructor, and proceeds to the next fiber in the chain.
+スレッドがトリガされると、そのファイバチェーン内のファイバをLIFO順に1つずつ
+実行します。言い換えると、最も新しく追加されたファイバが最初に実行されます。
+ファイバは`fib::Yielded`を返すことができます。これは、ファイバが一時停止され
+完了していないことを意味します。この場合、スレッドはそのファイバを後で実行できる
+ように保持し、チェーンの次のファイバを実行します。ファイバは`fib::Complete`を
+返すこともできます。この場合、スレッドはそのファイバをチェーンから削除し、
+その`drop`デストラクタを実行します。そして、チェーンの次のファイバを実行します。
