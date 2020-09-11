@@ -1,51 +1,52 @@
-# Concurrency
+# 並行処理
 
-Concurrency model is one of the most important aspects of an Embedded Operating
-System. Applications for embedded micro-controllers require operating with
-multiple sources of events at one time. Furthermore an embedded system should be
-in a power-saving mode as often and as long as possible. Drone's goal is to make
-writing highly concurrent and power-efficient applications easy and correct.
+並行処理モデルは、組み込みオペレーティングシステムの最も重要な側面の一つです。
+組み込みマイクロコントローラのアプリケーションでは、一度に複数のイベントソースを
+使用して動作する必要があります。さらに、組み込みシステムは、できるだけ頻繁に、
+できるだけ長く、省電力モードでなければなりません。Droneの目的は、高い並行処理
+能力を持ち、電力効率の高いアプリケーションを簡単に正しく書けるようにすることです。
 
-First, let's see how conventional Embedded Operating Systems work. They allow
-you to create tasks that are running in parallel, each with its own stack:
+まず、従来の組み込みオペレーティングシステムがどのように動作するかを見てみましょう。
+それらは、各自が独自のスタックを持ち、並列に実行するタスクを作成することを可能に
+します。
 
 ![Conventional RTOS](../assets/conventional-rtos.svg)
 
-However this is not how hardware is actually designed. In fact, processors can
-only execute a single task at a time. What conventional Operating Systems
-actually do, is that they are rapidly switching between tasks, to make them
-**appear** to be running in parallel:
+しかし、これはハードウェアが実際に設計されている方法ではありません。実際、
+プロセッサは一度に一つのタスクしか実行できません。従来のオペレーティングシステムが
+実際に行っていることは、タスクの切り替えを高速に行い、並列に実行しているように
+**見せかけている**ことです。
 
 ![Conventional RTOS Time Sharing](../assets/conventional-rtos-slices.svg)
 
-That concurrency model, while having clear advantages for desktop and server
-operating systems, incurs noticeable overhead for embedded real-time
-systems. Also to protect from stack overflow errors it should be running on a
-processor with built-in Memory Management/Protection Unit, which is not the case
-for STM32F103.
+その並行処理モデルは、デスクトップやサーバのオペレーティングシステムには明確な
+利点がありますが、組み込みリアルタイムシステムには顕著なオーバーヘッドを招きます。
+また、スタックオーバーフローエラーから保護するためには、メモリ管理/保護ユニットを
+内蔵したプロセッサで実行する必要がありますが、STM32F103はそのような装置を持ちません。
 
-Contrarily, modern hardware evolves in the direction of more elaborate interrupt
-controllers. For example, Nested Vectored Interrupt Controller, or NVIC, which
-can be found in each Cortex-M processor. It implements many hardware
-optimizations to reduce scheduling costs, such as late-arriving or
-tail-chaining. Drone OS utilizes such interrupt controllers to build strictly
-prioritized fully preemptive scheduling:
+逆に、現代のハードウェアは、より精巧な割り込みコントローラの方向に進化しています。
+たとえば、各Cortex-Mプロセッサに搭載されているNVIC（Nested Vectored
+Interrupt Controller）です。NVICは、後着（late-arriving）やテールチェイン
+（tail-chaining）などのスケジューリングコストを削減するためのハードウェア
+最適化を数多く実装しています。Drone OSはこのような割り込みコントローラを利用して、
+厳密に優先付けされた完全なプリエンプティブスケジューリングを構築します。
 
 ![Drone Concurrency](../assets/drone-single-stack.svg)
 
-Only a task with a higher priority can preempt another task. And a task must
-completely relinquish the stack before completing or pausing to wait for an
-event or a resource. This allows Drone OS to use a single stack for all program
-tasks. This single stack is also protected from stack overflow errors by placing
-it at the border of the RAM.
+より優先度の高いタスクだけが他のタスクをプリエンプションすることができます。また、
+タスクは、完了する前、あるいはイベントやリソースを待つために一時停止する前に、
+スタックを完全に放棄しなければなりません。これにより、Drone OS は単一のスタックを
+すべてのプログラムタスクで使用することができます。また、この単一スタックを
+RAMの境界に配置することでスタックオーバーフローエラーからも保護しています。
 
-So how Drone achieves such stack usage for tasks? Mainly by using Rust's
-async/await or generators syntax, which translate to state machines. The task
-state, which needs to be saved between resumption points, is stored much more
-compactly on the heap.
+では、Droneはどのような方法で複数のタスクのためのそのようなスタック使用を実現
+しているのでしょうか。それは主として、ステートマシンに変換するRustのasync/
+await構文やGenerator構文の使用によります。タスクの状態は、再開ポイント間で
+保存する必要がありますが、ヒープ上に非常にコンパクトに保存されます。
 
-As an option Drone also implements conventional stateful tasks. Using such tasks
-one can integrate an existing blocking code with a Drone application, by
-allocating a separate stack. To use this feature safely, the processor must have
-an MMU/MPU. Otherwise creating such task is `unsafe`, because the safety from
-stack overflow couldn't be guaranteed.
+オプションとして、Droneは従来のステートフルなタスクも実装しています。このような
+タスクを使用し、個別のスタックを割り当てることで、既存のブロッキングコードを
+Droneアプリケーションに統合することができます。この機能を安全に使用するには、
+プロセッサがMMU/MPUを持っていなければなりません。そうでない場合、そのような
+タスクを作成することは`unsafe`です。スタックオーバーフローからの安全性が保証
+されないからです。
