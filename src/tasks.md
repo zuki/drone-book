@@ -1,10 +1,10 @@
-# Tasks
+# タスク
 
-In Drone OS applications, a task is a logical unit of work. Most often it's
-represented as an `async` function that's running in a separate thread. By
-convention, each task is placed into a separate module inside `src/tasks`
-directory. The module contains at least a task main function named
-`handler`. The function then re-exported in `src/tasks/mod.rs` like this:
+Drone OSアプリケーションにおいて、タスクは論理的な作業単位です。多くの場合、
+それは個別スレッドで実行している`async`関数として表現されます。慣習として、
+各タスクは`src/tasks`ディレクトリに個別のモジュールとして配置されます。
+このモジュールには少なくとも`handler`という名前のタスクのメイン関数が含まれて
+います。そして、この関数は`src/tasks/mod.rs`で次のように再エクスポートされます。
 
 ```rust
 pub mod my_task;
@@ -12,26 +12,26 @@ pub mod my_task;
 pub use self::my_task::handler as my_task;
 ```
 
-It is common to use an unused interrupt as the task thread. For example, in
-STM32F103, there is "UART5 global interrupt" at the position 53. If UART5
-peripheral is not used by the application, its interrupt can be reused for a
-completely different task:
+タスクスレッドとして未使用の割り込みを使用するのが一般的です。たとえば、
+STM32F103では、位置番号53に"UART5グローバル割り込み"があります。
+UART5ペリフェラルがアプリケーションで使用されていない場合、その割り込みを
+全く別のタスクで再利用することができます。
 
 ```rust
 thr::vtable! {
-    // ... The header is skipped ...
+    // ... ヘッダはスキップ ...
 
-    // --- Allocated threads ---
+    // --- 割り当て済みのスレッド ---
 
-    /// All classes of faults.
+    /// 全フォールトクラス.
     pub HARD_FAULT;
-    /// A thread for `my_task`.
+    /// `my_task`用のスレッド.
     pub 53: MY_TASK;
 }
 ```
 
-Then, assuming `my_task` is an `async` function, the thread can run the task as
-follows:
+次に、`my_task`が`async`関数であると仮定すると、スレッドはタスクを次のように
+して実行できます。f
 
 ```rust
 use crate::tasks;
@@ -42,8 +42,7 @@ thr.my_task.set_priority(0xB0);
 thr.my_task.exec(tasks::my_task());
 ```
 
-Now, whenever `my_task` future or any of its nested futures returns
-`Poll::Pending`, the thread suspends. And it will be resumed when the future
-will be ready for polling again. It is implemented by passing a
-`core::task::Waker` behind the scenes, which will trigger the thread when
-`wake`d.
+これにより、`my_task`futreやそのネストしたfutureが`Poll::Pending`を
+返すたびに、スレッドはサスペンドします。そして、futureが再びポーリングできる
+ようになると再開されます。これは、背後で`core::task::Waker`を渡すことで
+実装されており、`wake`されるとスレッドを起動します。
