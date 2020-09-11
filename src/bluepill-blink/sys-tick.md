@@ -1,52 +1,50 @@
-# Work with a Timer
+# タイマーを使う
 
-In this chapter we will work with a timer peripheral to timely assert and
-de-assert the PC13 pin, which is connected to the green LED on the Blue Pill
-board. The STM32F103 MCU possesses 7 timers of 4 different kinds. We will use
-the SysTick timer, which is present in all Cortex-M MCUs.
+この章では、Blue Pill基板の緑色LEDに接続されているPC13ピンを定期的にアサート・
+ディアサートするためにタイマーペリフェラルを使用します。STM32F103 MCUは、4種類、
+7個のタイマーを搭載しています。ここでは、すべてのCortex-M MCUに存在する
+SysTickタイマーを使用します。
 
-Drone already has a universal interface for timer peripherals in a form of
-`drone_cortexm::drv::timer::Timer` trait, as well as the SysTick driver
-implementation at `drone_cortexm::drv::sys_tick::SysTick`. However in this
-walk-through we will use interrupts and memory-mapped registers directly.
+Droneはすでに`drone_cortexm::drv::timer::Timer`トレイトの形でタイマー
+ペリフェラルのための汎用インターフェースを持っており、
+`drone_cortexm::drv::sys_tick::SysTick`というSysTickドライバの実装も
+持っています。しかし、この例では、割り込みとメモリマップドレジスタを直接使用します。
 
-Firstly, we need to allocate an interrupt used by the timer peripheral. Let's
-refer to the Reference Manual:
+まず、タイマペリフェラルで使用する割り込みを割り当てる必要があります。
+リファレンスマニュアルを参照しましょう。
 
 ![Vector Table](../assets/vtable-sys-tick.png)
 
-Unlike the RCC interrupt from the previous chapter, the SysTick doesn't have a
-position value. This means that we need to declare it using a precise name and
-before all the positional interrupts:
+前章のRCC割り込みとは異なり、SysTickは位置値を持ちません。つまり、正確な名前を
+使って、位置番号を持つすべての割り込みの前に宣言する必要があります。
 
 ```rust
 thr::vtable! {
-    // ... The header is skipped ...
+    // ... ヘッダーはスキップ ...
 
-    // --- Allocated threads ---
+    // --- アロケート済みのスレッド ---
 
-    /// All classes of faults.
+    /// 全フォールトクラス.
     pub HARD_FAULT;
-    /// System tick timer.
+    /// システムティックタイマー.
     pub SYS_TICK;
-    /// RCC global interrupt.
+    /// RCCグローバル割り込み.
     pub 5: RCC;
 }
 ```
 
-According to the Reference Manual, the frequency of the SysTick clock is the
-system clock divided by 8. Let's add this to our constants module
-`src/consts.rs`:
+リファレンスマニュアルによれば、SysTickクロックの周波数はシステムクロックを
+8で割った値です。これを定数モジュール`src/consts.rs`に追加しましょう。
 
 ```rust
-/// SysTick clock frequency.
+/// SysTickクロック周波数.
 pub const SYS_TICK_FREQ: u32 = SYS_CLK / 8;
 ```
 
-Let's update our root handler:
+ルートハンドラを変更しましょう。
 
 ```rust
-//! The root task.
+//! ルートタスク.
 
 use crate::{
     consts::{PLL_MULT, SYS_CLK, SYS_TICK_FREQ},
@@ -65,11 +63,11 @@ use drone_stm32_map::{
 };
 use futures::prelude::*;
 
-/// An error returned when a receiver has missed too many ticks.
+/// レシーバがあまりにも多くのティックを逃した場合はエラーが返される.
 #[derive(Debug)]
 pub struct TickOverflow;
 
-/// The root task handler.
+/// ルートタスクハンドラ.
 #[inline(never)]
 pub fn handler(reg: Regs, thr_init: ThrsInit) {
     let thr = thr::init(thr_init);
@@ -91,11 +89,11 @@ pub fn handler(reg: Regs, thr_init: ThrsInit) {
         .root_wait()
         .expect("beacon fail");
 
-    // Enter a sleep state on ISR exit.
+    // ISRを抜ける際にスリープ状態に入る.
     reg.scb_scr.sleeponexit.set_bit();
 }
 
-// We leave this function unchanged.
+// この関数はそのまま.
 async fn raise_system_frequency(...) {...}
 
 async fn beacon(
@@ -107,28 +105,27 @@ async fn beacon(
 }
 ```
 
-We added an error type `TickOverflow`, which we discuss later:
+エラー型`TickOverflow`を追加しました。これについては後で検討します。
 
 ```rust
 #[derive(Debug)]
 pub struct TickOverflow;
 ```
 
-At the beginning of the root handler we added calls to two `periph_*!`
-macros. These macros take parts of `reg` structure and move them into separate
-`gpio_c` and `sys_tick` structures. The macros do nothing at the run-time,
-because `reg`, `gpio_c`, and `sys_tick` are ZST, but they inform the type system
-of moved ownership.
+ルートハンドラのはじめに2つの`periph_*!`マクロコールを追加しました。これらの
+マクロは`reg`構造体の一部を取り、それを `gpio_c`構造体と`sys_tick`構造体に
+移動させます。`reg`、`gpio_c`、`sys_tick`はいずれもZST（ゼロサイズ型）なので
+このマクロは実行時には何もしませんが、所有権が移動されたことを型システムに通知
+します。
 
 ```rust
     let gpio_c = periph_gpio_c!(reg);
     let sys_tick = periph_sys_tick!(reg);
 ```
 
-Those structures hold all registers associated with the corresponding
-peripherals. We pass those peripheral structures to a new `async` function named
-`beacon`. This time the function returns a `Result` type, and we handle it with
-a panic:
+これらの構造体は、対応するペリフェラルに関連するすべてのレジスタを保持しています。
+これらのペリフェラル構造体を`beacon`という名前の新しい`async`関数に渡します。
+今回、この関数は`Result`型を返し、これをパニックで処理します。
 
 ```rust
     beacon(gpio_c, sys_tick, thr.sys_tick)
@@ -136,36 +133,36 @@ a panic:
         .expect("beacon fail");
 ```
 
-Let's start filling out the `beacon` function. We configure the SysTick timer
-peripheral to trigger the SysTick interrupt each second:
+`beacon`関数を書いていきましょう。SysTickタイマーが毎秒SysTick割り込みを
+発生するよう構成します。
 
 ```rust
-    // Attach a listener that will notify us on each interrupt trigger.
+    // 割り込みが発生するたびに通知するリスナをアタッチする。
     let mut tick_stream = thr_sys_tick.add_stream_pulse(
-        // This closure will be called when a receiver no longer can store the
-        // number of ticks since the last stream poll. If this happens, a
-        // `TickOverflow` error will be sent over the stream as is final value.
+        // このクロージャは、最後のストリームポーリング以降のティック数を
+        // レシーバが保持できなくなった場合に呼び出される。その場合、
+        // 最終的な値として `TickOverflow` エラーがストリーム上に送信される。
         || Err(TickOverflow),
-        // A fiber that will be called on each interrupt trigger. It sends a
-        // single tick over the stream.
+        // 割り込みが発生するごとに呼び出されるファイバ。1 tickを
+        // ストリームに送信する。
         fib::new_fn(|| fib::Yielded(Some(1))),
     );
-    // Clear the current value of the timer.
+    // タイマーの現在値をクリアする。
     sys_tick.stk_val.store(|r| r.write_current(0));
-    // Set the value to load into the `stk_val` register when the counter
-    // reaches 0. We set it to the count of SysTick clocks per second, so the
-    // reload will be triggered at each second.
+    // カウンタが0になった際に`stk_val`にロードする値を設定する。
+    // 1秒当たりのSysTickクロックの回数を設定することで、
+    // 1秒毎にリロードがトリガーされる。
     sys_tick.stk_load.store(|r| r.write_reload(SYS_TICK_FREQ));
     sys_tick.stk_ctrl.store(|r| {
-        r.set_tickint() // Counting down to 0 triggers the SysTick interrupt
-            .set_enable() // Start the counter
+        r.set_tickint() // カウントダウンし、0になったらSysTick割り込みを発生
+            .set_enable() // カウンターを開始
     });
 ```
 
-Now the `tick_stream` variable holds an instance of a `Stream` type. We `await`
-for each item of the stream until it ends. The `tick` variable is a number of
-pulses (in our case seconds) passed since the last stream poll. If the thread is
-not heavily interrupted, normally we expect it to be just `1`.
+ここまでで`tick_stream`変数が`Stream`型のインスタンスを保持するようになりました。
+ストリームの各項目を`await`し、終了を待ちます。`tick`変数は、最後のストリーム
+ポーリングから経過したパルス数（ここでは秒数）です。スレッドが大幅に中断されて
+いなければ、通常は単に`1`であると想定されます。
 
 ```rust
     while let Some(tick) = tick_stream.next().await {
@@ -175,15 +172,14 @@ not heavily interrupted, normally we expect it to be just `1`.
     }
 ```
 
-Let's flash this program and view the SWO output:
+このプログラムを書き込んで、SW0出力を見てみましょう。
 
 ```shell
 $ just flash
 $ just log
 ```
 
-You should see the following output. A "sec" line will be printed infinitely
-each second.
+次のような出力になるはずです。 "sec"行が毎秒ごとに無限にプリントされます。
 
 ```text
 ================================== LOG OUTPUT ==================================
@@ -194,54 +190,52 @@ sec
 sec
 ```
 
-Now it's time to use the GPIO peripheral, to drive the green LED on our Blue
-Pill.
+いよいよGPIOペリフェラルを使って、Blue Pillの緑色LEDを駆動する時がきました。
 
 ![Blue Pill Schematics](../assets/bluepill-schematics-leds.png)
 
-According to the Blue Pill schematic above, the current is flowing through D2
-when PC13 line is low (shorted to GND), and not flowing when its high (shorted
-to VCC). Let's configure the PC13 pin, place this at the beginning of the
-`beacon` function:
+上のBlue Pillの回路図によると、PC13がLow（GNDにショート）の時はD2に電流が流れ、
+High（VCCにショート）の時は流れません。PC13ピンを設定しましょう。以下を
+`beacon`関数の先頭に置きます。
 
 ```rust
-    gpio_c.rcc_busenr_gpioen.set_bit(); // GPIO port C clock enable
+    gpio_c.rcc_busenr_gpioen.set_bit(); // GPIOポートCのクロックを有効化
     gpio_c.gpio_crh.modify(|r| {
-        r.write_mode13(0b10) // Output mode, max speed 2 MHz
-            .write_cnf13(0b00) // General purpose output push-pull
+        r.write_mode13(0b10) // 出力モード、最高速度 2 MHz
+            .write_cnf13(0b00) // 汎用出力プッシュプル
     });
 ```
 
-Let's speed up our timer to wake up each 125 milliseconds. Update the `stk_load`
-initialization code as follows:
+125ミリ秒ごとに起きるようにタイマーの速度を上げましょう。`stk_load`の
+初期化コードを次のように変更します。
 
 ```rust
-    // Set the value to load into the `stk_val` register when the counter
-    // reaches 0. We set it to the count of SysTick clocks per second divided by
-    // 8, so the reload will be triggered each 125 ms.
+    // カウンタが0になったときに `stk_val`レジスタにロードする値を設定する。
+    // ここでは、1秒あたりのSysTickクロック数を8で割った値を設定しているので、
+    // 125msごとにリロードがトリガーされることになる。
     sys_tick
         .stk_load
         .store(|r| r.write_reload(SYS_TICK_FREQ / 8));
 ```
 
-Update the stream loop:
+ストリームループを変更します。
 
 ```rust
-    // A value cycling from 0 to 7. Full cycle represents a full second.
+    // 0から7まで周期する値。1周が1秒を表す。
     let mut counter = 0;
     while let Some(tick) = tick_stream.next().await {
         for _ in 0..tick?.get() {
-            // Each full second print a message.
+            // 各秒ごとにメッセージをプリント.
             if counter == 0 {
                 println!("sec");
             }
             match counter {
-                // On 0's and 250's millisecond pull the pin low.
+                // 0ミリ秒と250ミリ秒の時にピンをlowにする
                 0 | 2 => {
                     gpio_c.gpio_bsrr.br13.set_bit();
                 }
-                // On 125's, 375's, 500's, 625's, 750's, and 875's millisecond
-                // pull the pin high.
+                // 125, 375, 500, 625, 750, 875の各ミリ秒のときは
+                // ピンをhighにする
                 _ => {
                     gpio_c.gpio_bsrr.bs13.set_bit();
                 }
@@ -251,18 +245,18 @@ Update the stream loop:
     }
 ```
 
-Now flash the application to your Blue Pill board with:
+次のコマンドでアプリケーションをBlue Pillに書き込みます。
 
 ```shell
 $ just flash
 ```
 
-And you should see the following result:
+すると次のような結果になるはずです。
 
 <video autoplay loop muted width="100%">
 <source src="../assets/blink.webm" type="video/webm" />
 <source src="../assets/blink.mp4" type="video/mp4" />
 </video>
 
-The full code for this application can be found at
-[Github](https://github.com/drone-os/bluepill-blink).
+このアプリケーションの全コードは
+[Github](https://github.com/drone-os/bluepill-blink)にあります。
