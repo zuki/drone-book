@@ -1,36 +1,35 @@
-# Heap Tracing
+# ヒープトレース
 
-Drone OS provide tools to fine-tune the built-in allocator for purposes of a
-particular application.
+Drone OSは、特定のアプリケーションの用途に合わせて、組み込みのアロケータを微調整
+するためのツールを提供しています。
 
-A newly generated Drone project has a predefined `heaptrace` feature. When the
-feature is activated, the allocator will log the allocator operations to the log
-port #31. In order to capture these logs, a version of the application firmware
-with this feature activated needs to be flashed to the target device first:
+新規作成されたDroneプロジェクトには`heaptrace`機能が事前定義されています。この
+機能を有効にすると、アロケータはアロケータ操作をログポート#31に記録します。これらの
+ログを捕捉するためには、まず、この機能を有効にしたバージョンのアプリケーション
+ファームウェアをターゲットデバイスに書き込む必要があります。
 
 ```shell
 $ just features=heaptrace flash
 ```
 
-Then you run a special recipe to capture the data:
+次に、このデータを捕捉するための特別なレシピを実行します。
 
 ```shell
 $ just heaptrace
 ```
 
-This recipe is similar to `just log`, with an exception that it will
-additionally capture port #31 output and write it to a file named
-`heaptrace`. When you think it is enough data collected, just stop it with
-Ctrl-C.
+このレシピは`just log`と似ていますが、加えてポート#31の出力を取得し、
+`heaptrace`という名前のファイルに書き込むという違いがあります。十分なデータが
+収集されたと思ったら、Ctrl-Cで停止してください。
 
-When there is a non-empty `heaptrace` file with the collected data in the
-project root, you may use the following command to analyze your heap usage:
+プロジェクトのルートに収集されたデータを含む空でない`heaptrace`ファイルが
+ある場合、次のコマンドを使ってヒープの使用を分析できます。
 
 ```shell
 $ drone heap
 ```
 
-It will print statistics of all your allocations during `just heaptrace`:
+`just heaptrace`実行中の全割り当ての統計が出力されます。
 
 ```text
  Block Size | Max Load | Total Allocations
@@ -44,15 +43,15 @@ It will print statistics of all your allocations during `just heaptrace`:
 Maximum memory usage: 225 / 2.20%
 ```
 
-The data in the `heaptrace` file can also be used to generate an optimized
-memory pools layout:
+The data in the `heaptrace`ファイルのデータは最適なメモリプールレイアウトの
+生成にも使用することができます。
 
 ```shell
 $ drone heap generate --pools 5
 ```
 
-Here `5` is the maximum number of pools. Less pools lead to more fragmentation,
-but faster allocations. You should get something like this:
+ここでは`5`はプールの最大数です。プール数が少ないほど、フラグメンテーションは
+多くなりますが、割り当てが高速になります。次のような結果が得られるはずです。
 
 ```text
 =============================== SUGGESTED LAYOUT ===============================
@@ -68,4 +67,4 @@ pools = [
 # Fragmentation: 0 / 0.00%
 ```
 
-It generated a `[heap]` section suitable to put into the `Drone.toml`.
+これは`Drone.toml`に置くのにふさわしい`[heap]`セクションを生成します。
