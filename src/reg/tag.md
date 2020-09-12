@@ -1,6 +1,6 @@
-# Memory-Mapped Register Token Tags
+# メモリマップドレジスタトークンタグ
 
-Let's take a closer look at what exact type a register token has:
+レジスタトークンが持つ正確な型が何であるかを詳しく見てみましょう。
 
 ```rust
 pub fn handler(reg: Regs, thr_init: ThrsInit) {
@@ -8,52 +8,51 @@ pub fn handler(reg: Regs, thr_init: ThrsInit) {
 }
 ```
 
-A register token tag has one generic parameter - a register tag. There are three
-possible register tags:
+レジストークンタグは汎用パラメータであるレジスタータグを一つ持っています。
+レジスタタグは3種類あります。
 
-* `Urt` (for **U**nsynchronized **r**egister **t**ag)
-* `Srt` (for **S**ynchronized **r**egister **t**ag)
-* `Crt` (for **C**opyable **r**egister **t**ag)
+* Urt (**U**nsynchronized **r**egister **t**ag: 非同期レジスタタグ)
+* Srt (**S**ynchronized **r**egister **t**ag: 同期レジスタタグ)
+* Crt (**C**opyable **r**egister **t**ag: コピー可能なレジスタタグ)
 
-The tags are crucial to eliminate data-races for read-modify-write operations
-and to control move-semantics of the tokens.
+タグはread-modify-write操作におけるデータ競合を排除し、トークンのムーブ
+セマンティクスを制御するために非常に重要です。
 
 ![Register Token Tags](../assets/reg-tags.svg)
 
-Here `RegOwned` is a kind of tag that *doesn't* implement the `Copy` trait, and
-`RegAtomic` makes all read-modify-write operations atomic.
+ここで、`RegOwned`は`Copy`トレイトを実装して*いない*種類のタグであり、
+`RegAtomic`はすべてのread-modify-write操作をアトミックにします。
 
-Operations for register tokens and field tokens without an atomic tag (`Urt`)
-require exclusive (`&mut`) borrows. While atomic tokens (`Srt`, `Crt`) require
-shared (`&`) borrows. This eliminates any possibility of data-races by
-leveraging Rust compile-time checking. Despite `Urt` tagged tokens use more
-effective, but non-atomic processor instructions, it is impossible to use
-concurrently. A program with a possible data-race will be rejected by the
-compiler, and there are no additional checks in the run-time.
+アトミックタグ(`Urt`)を持たないレジスタトークンやフィールドトークンに対する操作は、
+排他的(`&mut`)借用を必要とします。一方、アトミックなトークン(`Srt`、`Crt`)は
+共有(`&`)参照を必要とします。これにより、Rustのコンパイル時のチェックを利用して
+データ競合の可能性を排除します。`Urt`タグ付きトークンはより効果的だが非アトミックな
+プロセッサ命令を使用しますが、同時に使用することはできません。データ強豪の可能性の
+あるプログラムはコンパイラによって拒絶され、ランタイム時の追加チェックはありません。
 
-For the whole register tokens, the only affected operation in regard to
-atomicity is the `modify` method. However for the field tokens, all write
-operations incur additional cost if used with an atomic tag. Because field
-tokens could be shared between different threads.
+レジスタトークン全体において、アトミック性に関して影響を受ける操作は`modify`メソッド
+だけです。しかし、フィールドトークンについては、アトミックタグを使用すると、すべての
+書き込み操作に追加コストがかかります。なぜなら、フィールドトークンが異なるスレッド間で
+共有される可能性があるからです。
 
-Another property of a token is affinity (expressed by the `RegOwned` trait.) An
-affine type can't be copied nor cloned, and uses Rust move-semantics. If a token
-has an affine tag (`Urt`, `Srt`), it is guaranteed that there exists only one
-token for this particular register or field. Though such tokens could still have
-multiple shared borrows. Non-affine (`Crt`) tokens can be freely copied, because
-they implement the `Copy` trait. Copying of tokens is still zero-cost, because
-tokens are zero-sized. On the other hand copyable tokens are always atomic.
+トークンのもう一つの属性は（`RegOwned`トレイトにより表現される）アフィニティです。
+アフィン型はコピーもクローンもできず、Rustのムーブセマンティクスを使用します。
+トークンがアフィンタグ(`Urt`, `Srt`)を持つ場合、この特定のレジスタやフィールドには
+1つのトークンしか存在しないことが保証されます。しかし、そのようなトークンでも複数の
+共有借用を持つ可能性があります。非アフィン(`Crt`)トークンは`Copy`トレイトを実装
+しているので自由にコピーすることができます。トークンはゼロサイズなので、トークンの
+コピーもゼロコストです。一方、コピー可能なトークンは常にアトミックです。
 
-To switch between different tags of tokens, both whole register tokens and
-register field tokens provide the following three methods:
+トークンのタグを別のタグに切り替えるために、すべてのレジスタトークンとレジスタ
+フィールドトークンは両者とも次の3つのメソッドを提供しています。
 
-* `into_unsync()` - converts to unsynchronized token
-* `into_sync()` - converts to synchronized token
-* `into_copy()` - converts to copyable token
+* into_unsync() - 非同期トークンに変換する
+* into_sync() - 同期トークンに変換する
+* into_copy() - コピー可能なトークンに変換する
 
-These methods take their tokens by-value, and return a new token of the same
-type but with a different tag. Not all conversions are possible. For example if
-a token is already `Crt`, there is no path backwards to `Srt` or `Urt`. Because
-we can't guarantee that all possible copies of the `Crt` token are dropped. For
-the details refer to the `drone_core::reg` documentation. As one might guess,
-these conversion methods are completely zero-cost.
+これらのメソッドは，トークンを値で受け取り，同じ型の新しいトークンを返しますが，
+異なるタグを持ちます。すべての変換が可能というわけではありません。たとえば、
+トークンが既に`Crt`である場合、`Srt`や`Urt`に戻る方法はありません。なぜなら、
+`Crt`トークンの可能性のあるすべてのコピーが削除されることを保証できないからです。
+詳細については`drone_core::reg`のドキュメントを参照してください。推測されて
+いると思いますが、これらの変換メソッドは完全にゼロコストです。
