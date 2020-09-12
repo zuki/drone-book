@@ -1,14 +1,14 @@
-# Message-Passing
+# メッセージパッシング
 
-The preferred way for inter-thread communication in Drone OS is
-message-passing. In a similar way as Rust's stdlib offers `std::sync::mpsc` for
-multi-producer single-consumer queues, Drone offers three different kinds of
-single-producer single-consumer queues under `drone_core::sync::spsc`.
+Drone OSにおける好ましいスレッド間通信の方法はメッセージパッシングです。Rustの
+stdlibが、マルチプロデューサ・シングルコンシューマ・キュー向けに
+`std::sync::mpsc` を提供しているように、Droneは、`drone_core::sync::spsc`
+の下に3種類のシングルプロデューサ・シングルコンシューマ・キューを提供しています。
 
-## Oneshot
+## ワンショット
 
-The oneshot channel is used to transfer an ownership of a single value from one
-thread to another. You can create a channel like this:
+oneshotチャネルは、あるスレッドから別のスレッドに単一の値の所有権を転送するために
+使用されます。次のようにしてチャンネルを作成することができます。
 
 ```rust
 use drone_core::sync::spsc::oneshot;
@@ -16,24 +16,24 @@ use drone_core::sync::spsc::oneshot;
 let (tx, rx) = oneshot::channel();
 ```
 
-`tx` and `rx` are transmitting and receiving parts respectively, they can be
-passed to different threads. The `tx` part has a `send` method, which takes
-`self` by value, meaning it can be called only once:
+`tx`と`rx`は各々送信パートと受信パートであり、異なるスレッドに渡すことができます。
+`tx`パートには`send`メソッドがあり、値として`self`を取ります。これは一回しか
+呼び出すことができないことを意味します。
 
 ```rust
 tx.send(my_message);
 ```
 
-The `rx` part is a future, which means it can be `.await`ed:
+`rx`パートはfutureです。これは`.await`することができることを意味します。
 
 ```rust
 let my_message = rx.await;
 ```
 
-## Ring
+## リング
 
-For passing multiple values of one type, there is the ring channel. It works by
-allocating a fixed-size ring-buffer:
+1つの型の複数の値を渡すためにリングチャネルがあります。これは固定サイズのリング
+バッファを割り当てることで動作します。
 
 ```rust
 use drone_core::sync::spsc::ring;
@@ -41,8 +41,8 @@ use drone_core::sync::spsc::ring;
 let (tx, rx) = ring::channel(100);
 ```
 
-Here `100` is the size of the underlying ring buffer. The `tx` part is used to
-send values over the channel:
+ここでは、`100`が使用するリングバッファのサイズです。`tx`パートを使って、
+このチャネルを通じて値を送信します。
 
 ```rust
 tx.send(value1);
@@ -50,19 +50,19 @@ tx.send(value2);
 tx.send(value3);
 ```
 
-The `rx` part is a stream:
+`rx`パートはストリームです。
 
 ```rust
 while let Some(value) = rx.next().await {
-    // new value received
+    // 受け取った新しい値
 }
 ```
 
-## Pulse
+## パルス
 
-When you need to repeatedly notify the other thread about some event, but
-without any payload, the ring channel might be an overkill. There is the pulse
-channel, which is backed by an atomic counter:
+何らかのイベントを他のスレッドに繰り返し通知する必要があるが、ペイロードがない場合、
+リングチャネルはやりすぎかもしれません。この場合、パルスチャネルがあります。これは
+アトミックカウンタにより実現されています。
 
 ```rust
 use drone_core::sync::spsc::pulse;
@@ -70,8 +70,7 @@ use drone_core::sync::spsc::pulse;
 let (tx, rx) = pulse::channel();
 ```
 
-The `tx` part has a `send` method, which takes a number to add to the underlying
-counter:
+`tx`パートは`send`メソッドを持ち、背後にあるカウンタに加算する数値を取ります。
 
 ```rust
 tx.send(1);
@@ -79,22 +78,22 @@ tx.send(3);
 tx.send(100);
 ```
 
-The `rx` part is a stream. Each successful poll of the stream clears the
-underlying counter and returns the number, which was stored:
+`rx`パートはストリームです。ストリームのポーリングが成功するたびにカウンタを
+クリアし、その値を返し、それが格納されます。
 
 ```rust
 while let Some(pulses) = rx.next().await {
-    // `pulses` number of events was happened since the last poll
+    // 最後のポーリング以降に`pulses`数のイベントが発生した
 }
 ```
 
-## Futures and streams
+## Futureとストリーム
 
-Thread tokens have methods that helps creating described channels for connecting
-with a particular thread.
+スレッドトークンは、特定のスレッドに接続するための、これまで説明したチャンネルを作成
+するためのメソッドを持ちます。
 
-`add_future` takes a fiber and returns a future (`rx` part of a oneshot
-channel). The future will be resolved when the fiber returns `fib::Complete`:
+`add_future`は`fiber`を受け取り、future (oneshotチャネルの`rx`パート) を
+返します。futureはファイバが`fib::Complete`を返した時点で解決されます。
 
 ```rust
 use drone_cortexm::{fib, thr::prelude::*};
@@ -109,15 +108,15 @@ let pll_ready = thr.rcc.add_future(fib::new_fn(|| {
 pll_ready.await;
 ```
 
-`add_stream_ring` returns a stream (`rx` part of a ring channel), which resolves
-each time the fiber returns `fib::Yielded(Some(...))` or
-`fib::Complete(Some(...))`:
+`add_stream_ring`はストリーム（リングチャネルの`rx`パート）を返し、これは
+ファイバが`fib::Yielded(Some(...))`または`fib::Complete(Some(...))`を
+返すたびに解決されます。
 
 ```rust
 use drone_cortexm::{fib, thr::prelude::*};
 
 let uart_bytes = thr.uart.add_stream_ring(
-    100, // The ring buffer size
+    100, // リングバッファサイズ
     || panic!("Ring buffer overflow"),
     fib::new_fn(|| {
         if let Some(byte) = read_uart_byte() {
@@ -129,9 +128,9 @@ let uart_bytes = thr.uart.add_stream_ring(
 );
 ```
 
-`add_stream_pulse` returns a stream (`rx` part of pulse channel), which resolves
-each time the fiber returns `fib::Yielded(Some(number))` or
-`fib::Complete(Some(number))`:
+`add_stream_pulse`はストリーム（パルスチェネルの`rx`パート）を返し、これは
+ファイバが`fib::Yielded(Some(number))`または`fib::Complete(Some(number))
+を返すたびに解決されます。
 
 ```rust
 use drone_cortexm::{fib, thr::prelude::*};
