@@ -1,9 +1,9 @@
-# Dynamic Memory
+# 動的メモリ
 
-In order to unleash the full potential of Rust type system, Drone OS provides a
-global allocator. This might seem paradoxical, but addition of some run-time
-dynamism helps with compile-time checks. Consider the signature of
-`thread::spawn` function from libstd:
+Rustの型システムの能力を最大限に引き出すために、Drone OS はグローバルアロケータを
+提供しています。これは逆説的に思えるかもしれませんが、ランタイムダイナミズムの追加は
+コンパイル時のチェックに役立ちます。libstdの`thread::spawn`関数のシグネチャを
+考えてみます。
 
 ```rust
 pub fn spawn<F, T>(f: F) -> JoinHandle<T> where
@@ -12,31 +12,30 @@ pub fn spawn<F, T>(f: F) -> JoinHandle<T> where
     T: Send + 'static;
 ```
 
-This means that in `std` applications to spawn a new OS thread, one need to call
-the `thread::spawn` function in the run-time, passing it a closure of type
-`F`. An interesting aspect here is the `F: Send + 'static` bound. This
-guarantees that the data captured by the closure is also `Send` and
-`'static`. `'static` rejects references that has a narrower scope than the
-entire program. And `Send` rejects thread-unsafe types. A nice thing here is
-that all of these properties are checked in the compile-time. Naturally,
-equivalent functions in Drone OS have similar signatures.
+これは、`std`アプリケーションで新規OSスレッドをスポーンするには、実行時に
+`thread::spawn`関数を呼び出し、`F`型のクロージャを渡す必要があることを意味
+します。ここで興味深いのは、`F: Send + 'static`境界です。これは、クロージャに
+よって捕捉されたデータがまた`Send`かつ`'static`であることを保証します。
+`'static`は、プログラム全体よりも狭いスコープを持つ参照を拒絶します。また、
+`Send`はスレッドセーフではない型を拒絶します。ここでの良い点は、これらの
+プロパティがすべてコンパイル時にチェックされることです。当然のことながら、
+Drone OSの相当する関数も同様のシグネチャを持っています。
 
-An allocator for embedded systems should meet the following conditions:
+組み込みシステム用のアロケータは、以下の条件を満たす必要があります。
 
-1. Determinism. For real-time systems, it is important that allocation,
-   deallocation, and reallocation operations have predictable timing.
+1. 決定的。リアルタイムシステムでは、割り当て、割り当て解除、再割り当ての
+   操作が予測可能なタイミングを持っていることが重要です。
 
-2. Small code size. For example jemalloc can add hundreds of kilobytes to the
-   binary size, while some supported MCUs have 64 KB of flash memory or even
-   less.
+2. 小さなコードサイズ。たとえば、jemallocは何百キロバイトものバイナリサイズを
+   追加できますが、サポートされているMCUの中には64KBやそれ以下のフラッシュ
+   メモリしかもっていないものがあります。
 
-Drone OS ships with a simple and predictable allocator, which fulfills the above
-conditions. It splits the whole heap memory region into a number of fixed-sized
-memory pools:
+Drone OSには、上記の条件を満たすシンプルで予測可能なアロケータが同梱されています。
+これは、ヒープメモリ領域全体を多くの固定サイズのメモリプールに分割します。
 
 ![Memory Pools](../assets/heap-pools.svg)
 
-The pools are configured at the compile-time in the `Drone.toml`. For example:
+このプールはコンパイル時に`Drone.toml`で設定されます。たとえば、次のように。
 
 ```toml
 [heap]
@@ -53,12 +52,12 @@ pools = [
 ]
 ```
 
-In result, the Drone allocator achieves all its operations to be constant-time
-and entirely atomic. However, a disadvantage of this approach is that in order
-to use the memory efficiently, the pools need to be tuned for each particular
-application. Drone provides tools to make it as easy as possible, which we will
-cover in the next chapter.
+この結果、Droneアロケータは全操作を一定時間かつ全くアトミックに実現しています。
+しかし、このアプローチの欠点は、メモリを効率的に使用するには、各アプリケーション
+ごとにプールを調整する必要があることです。Droneはそれを可能な限り簡単に行うための
+ツールを提供しています。それについては次の章で扱います。
 
-By providing a global allocator, a Drone application can use not only the Rust's
-`core` crate, but also the `alloc` crate. It enables one to use the following
-Rust types: `String`, `Vec`, `Box`, `Rc`, `Arc`, and more.
+グローバルアロケータを提供することで、DroneアプリケーションはRustの`core`
+クレートだけでなく、`alloc`クレートも使用することができます。これにより、
+次のRustの型を使用することができます: `String`, `Vec`, `Box`, `Rc`, `Arc`
+などです。
