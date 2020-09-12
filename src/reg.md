@@ -1,14 +1,12 @@
-# Memory-Mapped Registers
+# メモリマップドレジスタ
 
-Modern processor architectures (e.g. ARM) use memory-mapped I/O to perform
-communication between the CPU and peripherals. Using memory-mapped registers is
-a considerable part in programming for microcontroller. Therefore Drone OS
-provides a complex API, which provides convenient access to them without
-data-races.
+現代のプロセッサアーキテクチャ（ARMなど）は、CPUとペリフェラル間の通信を行うために
+メモリマップドI/Oを使用します。メモリマップドレジスタの使用はマイクロコントローラの
+プログラミングにおいてかなりの部分を占めています。そのため、Drone OSは複雑なAPIを
+提供しており、それらに対するデータ競合のない便利なアクセスを提供してます。
 
-For example in STM32F103, the memory address of `0x4001100C` corresponds to the
-GPIOC_ODR register. This is a register to control the output state of the GPIO
-port C peripheral.
+たとえば、STM32F103ではメモリアドレス`0x4001100C`はGPIOC_ODRレジスタに対応して
+います。これはGPIOポートCペリフェラルの出力状態を制御するためのレジスタです。
 
 ```rust
 use core::ptr::write_volatile;
@@ -18,18 +16,19 @@ unsafe {
 }
 ```
 
-The above code is an example how to write to a memory-mapped register in bare
-Rust, without Drone. It sets PC13 pin output to logic-high (resetting all other
-port C pins to logic-low.) This code is too low-level and error-prone, and also
-requires an `unsafe` block.
+上記のコードは、Droneを使用せず、生のRustでメモリマップドレジスタに書き込む方法の
+一例です。このコードは、PC13ピンの出力をロジックハイに設定しています（ポートCの
+他のすべてのピンはロジックローにリセットしています）。このコードはあまりにも低レベル
+かつエラーを引き起こしやすい上に`unsafe`ブロックを必要とします。
 
-For Cortex-M there is SVD (System View Description) format. Vendors generally
-provide files of this format for their Cortex-M MCUs. Drone generates
-MCU-specific register API from these files for each supported target. So copying
-addresses and offsets from reference manuals generally is not needed.
+Cortex-M では、SVD (System View Description) フォーマットがあります。通常、
+ベンダーは自社のCortex-M MCU用にこのフォーマットのファイルを提供しています。
+DroneはサポートしているターゲットごとにこれらのファイルからMCU固有のレジスタAPIを
+生成します。そのため、一般的に、リファレンスマニュアルからアドレスやオフセットを
+コピーする必要はありません。
 
-Let's look at the default `reset` function in `src/bin.rs`, which is the
-entry-point of the program:
+プログラムのエントリーポイントである`src/bin.rs`のデフォルトの`reset`関数を
+見てみましょう。
 
 ```rust
 #[no_mangle]
@@ -44,35 +43,35 @@ pub unsafe extern "C" fn reset() -> ! {
 }
 ```
 
-This `unsafe` function performs all necessary initialization routines before
-calling the safe `root` entry task. This includes `Regs::take()` and
-`ThrsInit::take()` calls. These calls create instances of `Regs` and `ThrsInit`
-types, which are zero-sized types. The calls are `unsafe`, because they must be
-done only once in the whole program run-time.
+この`unsafe`関数は、安全な`root`エントリタスクを呼び出す前に必要なすべての初期化
+ルーチンを実行します。これには `Regs::take()`と`ThrsInit::take()`の呼び出しが
+含まれています。これらの呼び出しは、ゼロサイズの型である`Regs`と`ThrsInit`の
+インスタンスを作成します。これらの呼び出しは`unsafe`です。プログラム全体の
+ランタイム中に一度だけ行わなれなければならないからです。
 
-Let's now check the `tasks::root` function (it is re-exported from `handler`):
+次に、`tasks::root`関数（`handler`から再エクスポートされています）を確認しましょう。
 
 ```rust
 pub fn handler(reg: Regs, thr_init: ThrsInit) {
-    // Enter a sleep state on ISR exit.
+    // ISRの終了時にスリープ状態にする
     reg.scb_scr.sleeponexit.set_bit();
 }
 ```
 
-`reg` is an open-struct (all fields of the struct are `pub`) and consists of all
-available register tokens. Each register token is also an open-struct and
-consists of register field tokens. So this line:
+`reg`はオープン構造体（構造体のすべてのフィールドが`pub`）であり、利用可能なすべての
+レジスタトークンで構成されています。各レジスタトークンもオープン構造体であり、
+レジスタフィールドトークンで構成されています。したがって、次の行
 
 ```rust
     reg.scb_scr.sleeponexit.set_bit();
 ```
 
-Sets SLEEPONEXIT bit of SCB_SCR register.
+は、SCB_SCRレジスタのSLEEPONEXITビットを設定します。
 
-Of course no real-world application would use all available memory-mapped
-registers. The `reg` object is supposed to be destructured within the `root`
-task handler and automatically dropped. To make this more readable, we move
-individual tokens out of `reg` in logical blocks using macros:
+もちろん、現実のアプリケーションでは利用可能なすべてのメモリマップドレジスタを
+使用することはありません。`reg`オブジェクトは`root`タスクハンドラ内で開放され、
+自動的に削除されることになっています。これをより読みやすくするために、マクロを
+使い、`reg`から個々のトークンを論理ブロックに移動させています。
 
 ```rust
 pub fn handler(reg: Regs, thr_init: ThrsInit) {
@@ -82,7 +81,7 @@ pub fn handler(reg: Regs, thr_init: ThrsInit) {
 }
 ```
 
-These macros use partial-moving feature of Rust and expand roughly as follows:
+これらのマクロはRustの部分移動機能を利用しており、大まかには以下のように展開されます。
 
 ```rust
 pub fn handler(reg: Regs, thr_init: ThrsInit) {
@@ -91,8 +90,8 @@ pub fn handler(reg: Regs, thr_init: ThrsInit) {
         gpio_crh: reg.gpio_crh,
         gpio_idr: reg.gpio_idr,
         gpio_odr: reg.gpio_odr,
-        // Notice that below are individual fields.
-        // Other APB2 peripherals may take other fields from this same registers.
+        // 以下は個々のフィールであることに注意
+        // 他のAPB2ペリフェラルは同じレジスタから別のフィールド取り出すことが可能
         rcc_apb2enr_iopcen: reg.rcc_apb2enr.iopcen,
         rcc_apb2enr_iopcrst: reg.rcc_apb2enr.iopcrst,
         // ...
@@ -108,8 +107,8 @@ pub fn handler(reg: Regs, thr_init: ThrsInit) {
 }
 ```
 
-If you wonder why we use macros instead of functions, the following example
-shows why functions wouldn't work:
+関数ではなく、何故マクロを使うのか疑問に思ったかもしれませんが、次の例は関数が
+機能しない理由を示しています。
 
 ```rust
 fn periph_gpio_c(reg: Regs) -> GpioC {
@@ -137,12 +136,12 @@ fn periph_sys_tick(reg: Regs) -> GpioC {
 }
 
 pub fn handler(reg: Regs, thr_init: ThrsInit) {
-            // --- move occurs because `reg` has type `Regs`, which
-            //     does not implement the `Copy` trait
+            // --- 移動が発生。なぜなら、`reg`は`Regs`型を持つが、
+            //    `Regs`は｀Copy｀トレイトを実装していないため。
     let gpio_c = periph_gpio_c!(reg);
-                             // --- value moved here
+                             // --- ここで値が移動する
     let sys_tick = periph_sys_tick!(reg);
-                                 // --- value used here after move
+                                 // --- 移動後の値をここで使用している
     beacon(gpio_c, sys_tick)
 }
 ```
