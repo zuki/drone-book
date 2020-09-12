@@ -1,79 +1,79 @@
-# Memory-Mapped Registers API Summary
+# メモリマップドレジスタAPIの概要
 
-This section provides examples of most common methods on register and field
-tokens. For complete API refer to `drone_core::reg` and `drone_cortexm::reg`
-module docs.
+このセクションでは、レジスタトークンとフィールドトークンの最も一般的なメソッドの例を
+提供します。完全なAPIについては`drone_core::reg`と`drone_cortexm::reg`、
+両モジュールのドキュメントを参照してください。
 
-## Whole Registers
+## 全レジスタ
 
-Read the value of RCC_CR register:
+RCC_CRレジスタの値を読み取る:
 
 ```rust
 let val = rcc_cr.load();
 ```
 
-HSIRDY is a single-bit field, so this method returns a `bool` value indicating
-whether the corresponding bit is set or cleared:
+HSIRDYはシングルビットフィールドなので、このメソッドは`boo`値を返し、対応する
+ビットが設定されているか、クリアされているかを示します。
 
 ```rust
-val.hsirdy() // equivalent to `val & (1 << 1) != 0`
+val.hsirdy() // `val & (1 << 1) != 0`に相当
 ```
 
-HSITRIM is a 5-bit field in the middle of the RCC_CR register. This method
-returns an integer of only this field bits shifted to the beginning:
+HSITRIMはRCC＿CRレジスタの中央にある5ビットのフィールドです。このメソッドは
+このフィールドのビットだけを先頭にシフトした整数を返します。
 
 ```rust
-val.hsitrim() // equivalent to `(val >> 3) & ((1 << 5) - 1)`
+val.hsitrim() // `(val >> 3) & ((1 << 5) - 1)`に相当
 ```
 
-Reset the register RCC_CR to its default value, which is specified in the
-reference manual:
+RCC_CRレジストをそのデフォルト値にリセットします。デフォルト値はリファレンス
+マニュアルに指定されています。
 
 ```rust
 rcc_cr.reset();
 ```
 
-The following line writes a new value to the RCC_CR register. The value is the
-register default value, except HSION is set to 1 and HSITRIM is set to 14.
+次の行は、RCC_CRレジスタに新しい値を書き込みます。その値はレジスタのデフォルト値です
+が、HSIONには1が、HSITRIMには14が設定されます。
 
 ```rust
 rcc_cr.store(|r| r.set_hsion().write_hsitrim(14));
-// Besides "set_", there are "clear_" and "toggle_" prefixes
-// for single-bit fields.
+// シングルビットフィールドには、"set_"の他に "clear_"と "toggle_"と
+// いう接頭辞がある。
 ```
 
-And finally the following line is a combination of all of the above, it performs
-read-modify-write operation:
+そして最後に、次の行は上記の全てを組み合わせたもので、read-modify-write操作を
+行います。
 
 ```rust
 rcc_cr.modify(|r| r.set_hsion().write_hsitrim(14));
 ```
 
-Unlike `store`, which resets unspecified fields to the default, the `modify`
-method keeps other field values intact.
+指定されていないフィールドをデフォルトにリセットする`store`とは異なり、
+`modify`メソッドは他のフィールドの値をそのまま保持します。
 
-## Register Fields
+## レジスタフィールド
 
-If you have only a register field token, you can perform operations affecting
-only this field, and not the other sibling fields:
+レジスタフィールドトークンしか持っていない場合は、そのフィールドだけに影響を与える
+操作しか実行できません。他の兄弟フィールドには影響を与えません。
 
 ```rust
-rcc_cr_hsirdy.read_bit(); // equivalent to `rcc_cr.load().hsirdy()`
-rcc_cr_hsitrim.read_bits(); // equivalent to `rcc_cr.load().hsitrim()`
-rcc_cr_hsirdy.set_bit(); // equivalent to `rcc_cr.modify(|r| r.set_hsirdy())`
-rcc_cr_hsirdy.clear_bit(); // equivalent to `rcc_cr.modify(|r| r.clear_hsirdy())`
-rcc_cr_hsirdy.toggle_bit(); // equivalent to `rcc_cr.modify(|r| r.toggle_hsirdy())`
-rcc_cr_hsitrim.write_bits(14); // equivalent to `rcc_cr.modify(|r| r.write_hsitrim(14))`
+rcc_cr_hsirdy.read_bit(); // `rcc_cr.load().hsirdy()`に相当
+rcc_cr_hsitrim.read_bits(); // `rcc_cr.load().hsitrim()`に相当
+rcc_cr_hsirdy.set_bit(); // `rcc_cr.modify(|r| r.set_hsirdy())`に相当
+rcc_cr_hsirdy.clear_bit(); // `rcc_cr.modify(|r| r.clear_hsirdy())`に相当
+rcc_cr_hsirdy.toggle_bit(); // `rcc_cr.modify(|r| r.toggle_hsirdy())`に相当
+rcc_cr_hsitrim.write_bits(14); // `rcc_cr.modify(|r| r.write_hsitrim(14))`に相当
 ```
 
-Also if you have tokens for several fields of the same register, you can perform
-a single read-modify-write operation:
+また、同じレジスタの複数のフィールドのトークンを持っている場合は、
+1つのread-modify-write操作を次のように行うことができます。
 
 ```rust
 rcc_cr_hsion.modify(|r| {
     rcc_cr_hsion.set(r);
     rcc_cr_hsitrim.write(r, 14);
 });
-// Which would be equivalent to:
+// これは次に相当する
 rcc_cr.modify(|r| r.set_hsion().write_hsitrim(14));
 ```
