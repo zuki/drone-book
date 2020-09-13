@@ -1,11 +1,11 @@
 #  Blue PillをBlack Magic Probeにする
 
-この章ではBlue PillボードからBlack Magic Probeを作成する過程を説明します。
-この過程は、Ubuntu 18.04.3 LTSとArch Linux 5.3.7でテスト指定しています。
+この章ではBlue PillボードからBlack Magic Probeを作成する手順を説明します。
+Ubuntu 18.04.3 LTSとArch Linux 5.3.7でテストしています。
 
 ## 準備
 
-この過程には次のパッケージがインストールされている必要があります。
+この作業には次のパッケージがインストールされている必要があります。
 
 ```shell
 $ sudo apt install build-essential \
@@ -186,7 +186,7 @@ Probeになりました。次回、ファームウェアのアップグレード
 
 ![Blue Pill and Official BMP](./assets/official-bmp-comparison.jpg)
 
-公式BMPには利点がいくつかあります。There are a few advantages of the official BMP:
+公式BMPには利点がいくつかあります。
 
 - Cortexデバッグコネクタの搭載
 - ターゲットへの給電が可能
