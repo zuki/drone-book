@@ -1,21 +1,21 @@
-# Peripheral Mappings
+# ペリフェラルマッピング
 
-Peripheral mappings serves two main purposes: grouping memory-mapped registers
-and individual register fields together in a single block for convenient use,
-and making one generic block for multiple peripherals of the same type
-(e.g. SPI1, SPI2, SPI3).
+ペリフェラルのマッピングには主に2つの目的があります: 使いやすいようにメモリマップド
+レジスタと個々のレジスタフィールドを1つのブロックにまとめることと、同タイプの複数の
+ペリフェラル（たとえば、SPI1、SPI2、SPI3）用の一つの汎用ブロックを作成することです。
 
-While register mappings we are able to generate almost automatically from SVD
-files (they are often of poor quality, and require manual fix-ups), we define
-peripheral mappings manually for each supported target with help of powerful
-procedure macros. For this reason we can't map all available peripherals for all
-targets, but we strive the mapping process to be as easy as possible. So users
-could map missing peripherals by themselves, and maybe contribute it back to
-Drone OS. For the details how to create peripheral mappings, refer to the
-`drone_core::periph` documentation.
+レジスタマッピングは、SVDファイルからほぼ自動的に生成することができます（品質が悪く、
+手で修正しなければならないことも多いです）が、Droneでは強力なプロシージャマクロの
+助けを借ることで、サポートされているターゲットごとにペリフェラルマッピングを手作業で
+定義しています。このため、すべてのターゲットで利用可能なすべてのペリフェラルをマッピング
+することはできませんが、可能な限り簡単にマッピングできるように努力しています。そのため、
+ユーザー自身が不足しているペリフェラルのマッピングを行い、それをDrone OSにフィード
+バックすることも可能です。ペリフェラルマッピングの作成方法については、
+`drone_core::periph`のドキュメントを参照してください。
 
-A peripheral mapping defines a macro to acquire all needed register tokens. In
-the following example, `periph_gpio_c!` and `periph_sys_tick!` are such macros:
+ペリフェラルマッピングは必要なすべてのレジスタトークンを取得するためのマクロを
+定義します。以下の例では、`periph_gpio_c!`と`periph_sys_tick!`がそのような
+マクロです。
 
 ```rust
 pub fn handler(reg: Regs, thr_init: ThrsInit) {
@@ -25,13 +25,13 @@ pub fn handler(reg: Regs, thr_init: ThrsInit) {
 }
 ```
 
-`gpio_c` and `sys_tick` objects are zero-sized, and these lines of code incur no
-run-time cost. These objects hold all relevant register and field tokens for the
-corresponding peripherals. It is impossible to create two instances for a single
-peripheral, because after the first macro call the `reg` object becomes
-partially-moved.
+`gpio_c`と`sys_tick`オブジェクトはゼロサイズであり、これらのコードはランタイム
+コストを発生させません。これらのオブジェクトは、対応するペリフェラルに関連する
+すべてのレジスタとフィールドトークンを保持します。1つのペリフェラルに対して2つの
+インスタンスを作成することはできません。最初のマクロを呼び出した後、`reg`オブジェクトは
+一部がムーブされた状態になるからです。
 
-The `beacon` function could be defined as follows:
+`beacon`関数は以下のように定義できます。
 
 ```rust
 fn beacon(
@@ -42,11 +42,11 @@ fn beacon(
 }
 ```
 
-Note that the type of `gpio_c` argument is a generic struct, because there are
-many possible peripherals with the same interface: `GpioA`, `GpioB`, `GpioC`,
-and so on. Conversely, the `sys_tick` type is not generic, because there is only
-one SysTick peripheral in the chip. We could easily define the `beacon` function
-to be generic over GPIO port:
+引数`gpio_c` の型は汎用構造体であることに注意してください。同じインタフェースを
+持つ可能性のある多くのペリフェラル（`GpioA`、`GpioB`、`GpioC`など）があるためです。
+一方、`sys_tick`型は汎用ではありません。なぜなら、チップにはSysTickペリフェラルが
+一つしかないからです。ビーコン機能をGPIOポート対する汎用的なものになるように定義する
+ことは簡単です。
 
 ```rust
 fn beacon<GpioPort: GpioPortMap>(
@@ -57,8 +57,8 @@ fn beacon<GpioPort: GpioPortMap>(
 }
 ```
 
-This is a preferred and very handy way to define drivers. We don't want to
-hard-code an SD-card driver to use for example only SPI3. An alternative
-approach would be to wrap the whole driver code into a macro, and call it with
-SPI1, SPI2, SPI3 arguments. But we believe this would be a less clean and
-idiomatic way.
+これは、ドライバを定義するための推奨かつ非常に便利な方法です。SDカードドライバを
+たとえばSPI3でしか使用できないようにハードコーディングすることはしたくはないです。
+もう一つのアプローチとしては、ドライバコード全体をマクロでラップして、SPI1, SPI2,
+SPI3を引数として呼び出す方法があります。しかし、これはあまりクリーンでも慣用的な
+ものでもないと思います。
