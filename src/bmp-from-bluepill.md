@@ -1,4 +1,4 @@
-#  Blue PillをBlack Magic Probeにする
+#  Blue PillをBlack Magic Probeに
 
 この章ではBlue PillボードからBlack Magic Probeを作成する手順を説明します。
 Ubuntu 18.04.3 LTSとArch Linux 5.3.7でテストしています。

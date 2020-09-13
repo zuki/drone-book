@@ -1,9 +1,9 @@
 [book]
 authors = ["Valentine Valyaeff"]
-language = "en"
+language = "ja"
 multilingual = false
 src = "src"
-title = "The Drone Embedded Operating System"
+title = "Drone組込みオペレーティングシステム"
 
 [output.html]
 google-analytics = "UA-148590307-2"
