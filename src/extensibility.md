@@ -1,52 +1,52 @@
-# Drone OS Extensibility
+# Drone OSの拡張性
 
-Drone is designed to be maximally extensible to various platforms. It is
-composed of a complex hierarchy of Rust crates. Where the main foundational part
-if fully platform-agnostic, and platform-specific crates are built on top of it.
+Droneは様々なプラットフォームに最大限に拡張できるように設計されています。Droneは、
+複雑な階層構造を持つRustクレートで構成されています。主たる基盤部分は完全にプラット
+フォームに非依存であり、その上にプラットフォーム固有のクレートが構築されています。
 
-The core part of Drone makes little to no assumptions about the platform it will
-be running on. One exception is that the platform should have a good support of
-atomic operations on the instruction level. Drone tries hard to never use
-disabling of interrupts to protect its shared data-structures.
+Droneのコア部分は、それが実行されるプラットフォームについてはほとんど何も仮定して
+いません。1つの例外は、プラットフォームが命令レベルでアトミック操作をサポートしている
+ことです。Droneは、共有のデータ構造を保護するために割り込みの無効化を決して使わない
+ようにしています。
 
-In this section we will review Drone crates hierarchy by the example of Nordic
-Semiconductor's nRF91 microcontroller series.
+このセクションでは、Nordic Semiconductor社のnRF91マイクロコントローラシリーズを
+例にとり、Droneのクレート階層をレビューします。
 
 ![Crates Hierarchy](../assets/crates-hierarchy.svg)
 
-The crates composed of the following workspaces:
+クレートは次のワークスペースで構成されています。
 
-* **drone** - Drone command-line utility.
+* **drone** - Droneコマンドラインユティリティ。
 
-* **drone-core** - Drone core functionality.
+* **drone-core** - Droneコア機能。
 
-* **drone-cortexm** - ARM® Cortex®-M support.
+* **drone-cortexm** - ARM® Cortex®-Mのサポート。
 
-* **drone-svd** - CMSIS-SVD file format parser.
+* **drone-svd** - CMSIS-SVDファイルフォーマットパーサ。
 
-* **drone-nrf-map** - Nordic Semiconductor nRFx mappings.
+* **drone-nrf-map** - Nordic Semiconductor社製nRFxのマッピング。
 
-* **drone-nrf91-dso** - Drone Serial Output implementation for Nordic
-  Semiconductor nRF91.
+* **drone-nrf91-dso** - Nordic Semiconductor社製nRFx91用のDroneシリアル出力実装。
 
-## Adding New Chip Support
+## 新しいチップのサポート
 
-In order to add Drone support for a not-yet-supported chip, firstly we need to
-determine its platform. If the platform is not yet supported, e.g. RISC-V, we
-start by creating `drone-riscv` crate. If the platform is already supported,
-e.g. Cortex-M, but the platform version is not yet supported, e.g. Cortex-M23,
-we extend the existing `drone-cortexm` crate.
+まだサポートしていないチップをドローンがサポートするようにするためには、まずその
+プラットフォームを決定する必要があります。まだプラットフォームがサポートされていない
+場合（たとえば、RISC-V）は、`drone-riscv`クレートの作成から始めます。すでに
+プラットフォームがサポートされている（たとえば、Cortex-M）が、まだプラットフォームの
+バージョンがサポートされていない場合（たとえば、Cortex-M23）は、既存の
+`drone-cortexm`クレートを拡張します。
 
-When we have the platform support, we need to add registers and interrupt
-mappings. We need to find out if there is already a crate for the chip
-series. If there is no such crate, e.g. Texas Instruments SimpleLink™, we need
-to create one: `drone-tisl-map`. If, for example, we need to add support for
-STM32WB55, we need to extend the existing `drone-stm32-map` crate.
+プラットフォームがサポートされたら、レジスタと割り込みマッピングを追加する必要が
+あります。そのチップシリーズ用のクレートが既に存在するか否かを調べる必要があります。
+そのようなクレートがない場合（たとえば、Texas Instruments SimpleLink™）は
+新しく`drone-tisl-map`を作成する必要があります。たとえば、STM32WB55をサポート
+する必要がある場合は、既存の`drone-stm32-map`クレートを拡張する必要があります。
 
-If the chip doesn't have hardware logging capabilities (e.g. SWO), we need to
-write a crate, which implements DSO (Drone Serial Output) protocol in
-software. By, for example, using generic UART peripheral.
+チップにハードウェアロギング機能（たとえば、SWO）がない場合は、たとえば、汎用の
+UAETペリフェラルを使ってソフトウェアでDSO（Drone Serial Output）プロトコルを
+実装したクレートを作成する必要があります。
 
-Lastly, we need to let the `drone` CLI utility to know about the chip. There
-should be at least one debugger and at least one logger options for the
-chip. This will be covered in the next section.
+最後に、`drone`CLIユーティリティにチップのことを知ってもらう必要があります。
+チップには少なくとも1つのデバッガと少なくとも一つのロガーのオプションがなければ
+なりません。これについては次のセクションで説明します。
