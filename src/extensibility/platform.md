@@ -1,26 +1,26 @@
-# Platform-Specific Layer
+# プラットフォーム固有レイヤ
 
-This layer fills the gap between the platform-agnostic core and the specific
-platform. Target-specific intrinsics and inline assembler can be used here.
+このレイヤは、プラットフォームに依存しないコアと特定のプラットフォームとの間の
+ギャップを埋めるものです。ここでは、ターゲット固有のintrinsicsやインライン
+アセンブラを使用することができます。
 
-The platform crate implements `drone-core` runtime at `src/rt.rs`. Furthermore
-it can export various utility functions. For example
-`drone_cortexm::processor::self_reset`, which runs a sequence of assembly
-instructions to issue a self-reset request.
+プラットフォームクレートは`drone-core`ランタイムを`src/rt.rs`に実装します。
+さらに、様々なユーティリティ関数をエクスポートできます。たとえば、`drone_cortexm::processor::self_reset`は、セルフリセット要求を発行する
+ための一連のアセンブリ命令を実行します。
 
-This layer provides a backend for Drone's threading API. If we take Cortex-M as
-an example, here the Drone threading system is implemented by leveraging NVIC
-(Nested Vectored Interrupt Controller.) Where each Drone thread corresponds to a
-hardware interrupt, and NVIC is responsible for switching between the threads.
+このレイヤは、DroneのスレッドAPIのバックエンドを提供します。Cortex-Mを例にとると、
+このレイヤでNVIC（Nested Vectored Interrupt Controller）を利用して
+Droneのスレッディングシステムが実装されています。個々のDroneスレッドが一つの
+ハードウェア割り込みに対応し、NVICがスレッド間のスイッチングを担当しています。
 
-The crate should include at least one `core::task::Waker` implementation for
-Rust `Future`s. `drone-cortexm` implements two: one for the lowest thread, which
-utilizes `WFE`/`SEV` assembly instructions, and the other uses the `NVIC_STIR`
-register.
+このクレートはRustの`Future`のための`core::task::Waker`の実装を少なくとも1つ
+持っていなければなりません。`drone-cortexm`は2つ実装をしており、1つは`WFE`/`SEV`
+アセンブリ命令を利用した最下位のスレッド用で、もう1つは`NVIC_STIR`レジスタを利用
+しています。
 
-As stackful threading is highly target-specific, stackful Drone fibers are
-implemented at this layer. If the target incorporates an MPU (Memory Protection
-Unit), it should be used to protect from stack overflow errors. Because the core
-Drone provides zero-cost protection only for the main stack, and hence only for
-stackless fibers. If there is no MPU, the corresponding constructor functions
-must be marked `unsafe`.
+スタックフルなスレッドはターゲット固有性が高いため、スタックフルなDroneファイバは
+このレイヤで実装されています。ターゲットがMPU（メモリ保護ユニット）を組み込んで
+いる場合は、スタックオーバーフローエラーから保護するために使用する必要があります。
+なぜなら、Droneコアが提供するのはメインスタックに対するゼロコスト保護だけであり、
+つまり、スタックレスなファイバに対する保護しか提供していないからです。MPUがない
+場合は、対応するコンストラクタ関数を`unsafe`とマークしなければなりません。
