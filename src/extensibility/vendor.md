@@ -1,35 +1,35 @@
-# Vendor-Specific Layer
+# ベンダ固有レイア
 
-This layer consists of memory-mapped register, interrupt, and peripheral
-mappings, and also possibly of DSO (Drone Serial Output) implementations. In
-this section we will overview `drone-nrf-map` and `drone-nrf91-dso` crates as
-examples of the vendor-specific layer.
+このレイヤは、メモリマップドレジスタと割り込み、ペリフェラルのマッピング、そして
+場合によってはDSO（Drone Serial Output）実装で構成されます。このセクションでは、
+ベンダ固有レイヤの例として、`drone-nrf-map`と`drone-nrf91-dso`クレートを概観
+します。
 
-## Bindings
+## バインディング
 
-`drone-nrf-map` collection of crates is purely declarative. We try to
-automatically generate as much code as possible from vendor-provided CMSIS-SVD
-files. Generation of memory-mapped register bindings is highly
-parallelizable. Therefore it's splitted into 12 crates, which are named from
-`drone-nrf-map-pieces-1` to `drone-nrf-map-pieces-12` and compiled by cargo in
-parallel. `drone-nrf-map-pieces-*` crates are all re-exported by single
-`drone-nrf-map-pieces` crate, which can be further used by peripheral bindings.
+クレートの`drone-nrf-map`コレクションは純粋に宣言的なものです。ベンダ提供の
+CMSIS-SVDファイルから可能な限り多くのコードを自動的に生成するようにしています。
+メモリマップドレジスタバインディングの生成は高度に並列化されています。そのため、`drone-nrf-map-pieces-1`から`drone-nrf-map-pieces-12`までの名前を持つ
+12個のクレートに分割され、Cargoによって並列にコンパイルされます。
+`drone-nrf-map-pieces-*`クレートはすべて単一の`drone-nrf-map-pieces`
+クレートにより再エクスポートされており、ペリフェラルバインディグで使用する
+ことができます。
 
-Not all bindings can be auto-generated. We also manually declare [peripheral
-mappings](../periph.md). For the sake of compile-time parallelization, each
-peripheral type is declared in its own crate
-(e.g. `drone-nrf-map-periph-uarte`.) Periheral crates are opt-in, they are
-enabled by activating corresponding cargo features for `drone-nrf-map` crate.
+すべてのバインディングが自動生成できるわけではありません。手作業でも[ペリフェラル
+マッピング](../periph.md)を宣言しています。コンパイルを並列処理するために、
+各ペリフェラルの型はそれ自身のクレート（たとえば、`drone-nrf-map-periph-uarte`）
+で宣言されています。ペリフェラルクレートはオプトインであり、`drone-nrf-map`
+クレートの対応するcargo featureをアクティブにすることにより有効にします。
 
-Finally, `drone-nrf-map-pieces` and `drone-nrf-map-periph-*` crates are all
-re-exported by `drone-nrf-map` crate.
+最後に、`drone-nrf-map-pieces`と`drone-nrf-map-periph-*`クレートはすべて
+`drone-nrf-map`クレートによって再エクスポートされています。
 
-## Drone Serial Output
+## DSO（Drone Serila Output）
 
-If the target doesn't implement usual hardware logging, as in case with nRF9160,
-we provide a software logging implementation. It uses special Drone Serial
-Output protocol to provide features similar to hardware SWO. Namely splitting
-the output into different ports and forming atomic packets.
+nRF9160の場合のようにターゲットが通常のハードウェアロギングを実装していない場合、
+ソフトウェアロギングの実装を提供します。これは特別なDSO（Drone Serial Output）
+プロトコルを使用してハードウェアSWOと同等な機能を提供しています。DSOは出力を異なる
+ポートに分割し、アトミックパケットを形成するものです。
 
-`drone-nrf91-dso` implementation is based on software output FIFO, and utilizes
-one of generic built-in UART peripheral.
+`drone-nrf91-dso`の実装は、ソフトウェア出力FIFOに基づいており、内蔵の汎用UART
+ペリフェラルの1つを利用します。
