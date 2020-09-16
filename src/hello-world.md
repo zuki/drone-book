@@ -60,7 +60,7 @@ $ drone new --device stm32f103 --flash-size 128K --ram-size 20K hello-world
 $ cd hello-world
 ```
 
-プロジェクトの中で最初に行うことは依存クレートのインストールです。
+プロジェクトの中で最初に行うことは依存パッケージのインストールです。
 
 ```shell
 $ just deps
