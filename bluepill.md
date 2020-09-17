@@ -1,4 +1,10 @@
-# 読めるBlue Pill
+# BluePill破壊？
+
+新品のBluePillにblackmagic_dfu.binとblackmagic.binをst-flashで書き込んだ
+（[詳細](install.md）ところ、BluePillが以下のように読めなくなった。Windowsで
+動くST製の`STM32 ST-LINK Utility`でも同様で、設定を変えても認識しない。
+
+## 読めるBluePill
 
 ```
 dspace@mini:~$ st-info --probe
@@ -12,7 +18,7 @@ Found 1 stlink programmers
 dspace@mini:~$
 ```
 
-# 読めないBlue Pill
+## 読めないBluePill
 
 ```
 dspace@mini:~$ st-info --probe
@@ -53,10 +59,11 @@ st-flash 1.6.1
 Failed to connect to target
 ```
 
-## フラッシュのクリア
+## フラッシュを全クリアして復活
 
-Windowsで`STM32 ST-LINK Utility`を立ち上げ、ST-LINKをリセットボタンを押しながら挿入した
-ところ認識したので、全エリアクリアした。すると以下の通り、BluePillが見えるようになった。
+`STM32 ST-LINK Utility`においてBluePillをつないだST-LINKをBluePillのリセット
+ボタンを押しながら挿入したところ認識したので、フラッシュを全エリアクリアした。すると
+以下の通り、BluePillが見えるようになった。
 
 ```
 dspace@mini:~$ st-info --probe
@@ -126,7 +133,9 @@ Mass erasing2020-09-16T10:03:20 DEBUG common.c: *** stlink_read_debug32 1 is 0x4
 2020-09-16T10:03:20 DEBUG common.c: *** stlink_close ***
 ```
 
-# ST-LINK V2と[stlink](https://github.com/stlink-org/stlink)を使った書き込み方法
+# BluePill復活を確認
+
+## ST-LINKと[stlink](https://github.com/stlink-org/stlink)を使って書き込み
 
 ST-LINK V2はopenocdからは使えないみたい（`interface/stlink-v2.cfg`は正規商品用で
 `hla_vid_pid`がST-LINK V2のものとは違う）でopenocdがエラーで立ち上がらなかった。そこで
@@ -156,7 +165,7 @@ stlinkのst-utilを使って書き込みを行ったところ、うまく行っ�
     Transfer rate: 16 KB/sec, 4193 bytes/write.
     ```
 
-# `st-flash`で書き込む
+## `st-flash`で書き込む
 
 `st-flash`で書き込む場合、ELF形式のファイルをBIN形式に変換する必要がある。
 
@@ -188,21 +197,158 @@ file blinky.bin md5 checksum: a776c779de16d57c1c9a1648ab9c896d, stlink checksum:
 2020-09-16T10:41:12 INFO common.c: Flash written and verified! jolly good!
 ```
 
-# 壊れたSTM32F4Discovery
+これでBluePillが購入時の状態に戻ったことがわかった。そこで、BlackMagic化に再挑戦することにした。
+
+# BlackMagic化に再挑戦
+
+## bootloader (blackmagic_dfu.bin)の書き込み => 成功
 
 ```
-dspace@mini:~/develop/rust/tock-stm32$ st-info --probe
-Found 0 stlink programmers
+dspace@mini:~/source/blackmagic/src$ st-flash write blackmagic_dfu.bin 0x8000000
+st-flash 1.6.1
+2020-09-16T16:55:54 INFO common.c: F1xx Medium-density: 20 KiB SRAM, 64 KiB flash in at least 1 KiB pages.
+file blackmagic_dfu.bin md5 checksum: 2d7aca3796d74cfac627132fa823a7, stlink checksum: 0x000a7453
+2020-09-16T16:55:54 INFO common.c: Attempting to write 7308 (0x1c8c) bytes to stm32 address: 134217728 (0x8000000)
+2020-09-16T16:55:54 INFO common.c: Flash page at addr: 0x08000000 erased
+2020-09-16T16:55:54 INFO common.c: Flash page at addr: 0x08000400 erased
+2020-09-16T16:55:54 INFO common.c: Flash page at addr: 0x08000800 erased
+2020-09-16T16:55:54 INFO common.c: Flash page at addr: 0x08000c00 erased
+2020-09-16T16:55:54 INFO common.c: Flash page at addr: 0x08001000 erased
+2020-09-16T16:55:54 INFO common.c: Flash page at addr: 0x08001400 erased
+2020-09-16T16:55:54 INFO common.c: Flash page at addr: 0x08001800 erased
+2020-09-16T16:55:54 INFO common.c: Flash page at addr: 0x08001c00 erased
+2020-09-16T16:55:54 INFO common.c: Finished erasing 8 pages of 1024 (0x400) bytes
+2020-09-16T16:55:54 INFO common.c: Starting Flash write for VL/F0/F3/F1_XL core id
+2020-09-16T16:55:54 INFO flash_loader.c: Successfully loaded flash loader in sram
+  8/8 pages written
+2020-09-16T16:55:54 INFO common.c: Starting verification of write complete
+2020-09-16T16:55:54 INFO common.c: Flash written and verified! jolly good!
 ```
 
-# 壊れていないSTM32F4Discovery
+## BluePillをUSBをつないでも反応なし。
 
 ```
-dspace@mini:~/develop/rust/tock-stm32$ st-info --probe
-Found 1 stlink programmers
- serial:     303636434646333033343331353733343537313532323138
- hla-serial: "\x30\x36\x36\x43\x46\x46\x33\x30\x33\x34\x33\x31\x35\x37\x33\x34\x35\x37\x31\x35\x32\x32\x31\x38"
- flash:      1048576 (pagesize: 16384)
- sram:       196608
- chipid:     0x0413
- descr:      F4xx
+dspace@mini:~/source/blackmagic/src$ dfu-util -l -v
+dfu-util 0.9
+
+Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
+Copyright 2010-2016 Tormod Volden and Stefan Schmidt
+This program is Free Software and has ABSOLUTELY NO WARRANTY
+Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
+```
+
+## BluePillをUSBハブ経由でmacにつなぐと反応あり。
+
+```
+dspace@mini:~/source/blackmagic/src$ dfu-util -l -v
+dfu-util 0.9
+
+Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
+Copyright 2010-2016 Tormod Volden and Stefan Schmidt
+This program is Free Software and has ABSOLUTELY NO WARRANTY
+Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
+
+Found DFU: [1d50:6017] ver=0100, devnum=7, cfg=1, intf=0, path="20-7.1", alt=0, name="@Internal Flash   /0x08000000/8*001Ka,120*001Kg", serial="2A76916F"
+
+dspace@mini:~/develop/rust/tock-book$ lsusb
+Bus 020 Device 007: ID 1d50:6017 1d50 Black Magic (Upgrade), SWLINK, (Firmware v1.6.1-574-g6d18a61)  Serial: 2A76916F
+```
+
+![BlackMagic](blackmagic.png)
+
+![ST-LINK V2](stlink_v2.png)
+
+## ただし、書き込みはdownloadが0%から進まない。
+
+```
+dspace@mini:~/source/blackmagic/src$ dfu-util -d 1d50:6018,:6017 -s 0x08002000:leave -D blackmagic.bin
+dfu-util 0.9
+
+Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
+Copyright 2010-2016 Tormod Volden and Stefan Schmidt
+This program is Free Software and has ABSOLUTELY NO WARRANTY
+Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
+
+dfu-util: Invalid DFU suffix signature
+dfu-util: A valid DFU suffix will be required in a future dfu-util release!!!
+Opening DFU capable USB device...
+ID 1d50:6017
+Run-time device DFU version 011a
+Claiming USB DFU Interface...
+Setting Alternate Setting #0 ...
+Determining device status: state = dfuIDLE, status = 0
+dfuIDLE, continuing
+DFU mode device DFU version 011a
+Device returned transfer size 1024
+DfuSe interface name: "Internal Flash   "
+pagesize 1
+pagesize 1
+Downloading to address = 0x08002000, size = 89036
+Download	[                         ]   0%            0 bytes
+```
+
+- 2分後にリセットボタンを押す↓となる。erase中なのか。topで見るとこの間ずっと
+  20％ほどcpuを使っていた。R10を交換してみる価値は十分ありそう。
+  ```
+  dfu-util: Error during special command "ERASE_PAGE" get_status
+  ```
+
+## -v を付けて実行したら、ERASE_PAGEコマンドの発行した後、終了を待つが処理が終わらない状態であることが判明。
+
+```
+$ dfu-util -d 1d50:6018,:6017 -s 0x08002000:leave -D blackmagic.bin -v
+dfu-util 0.9
+
+Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
+Copyright 2010-2016 Tormod Volden and Stefan Schmidt
+This program is Free Software and has ABSOLUTELY NO WARRANTY
+Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
+
+dfu-util: Invalid DFU suffix signature
+dfu-util: A valid DFU suffix will be required in a future dfu-util release!!!
+Opening DFU capable USB device...
+ID 1d50:6017
+Run-time device DFU version 011a
+Claiming USB DFU Interface...
+Setting Alternate Setting #0 ...
+Determining device status: state = dfuIDLE, status = 0
+dfuIDLE, continuing
+DFU mode device DFU version 011a
+Device returned transfer size 1024
+DfuSe interface name: "Internal Flash   "
+pagesize 1
+Memory segment at 0x08000000   8 x 1024 =  8192 (r)
+pagesize 1
+Memory segment at 0x08002000 120 x 1024 = 122880 (rew)
+Downloading to address = 0x08002000, size = 89036
+Download	[                         ]   0%            0 bytes
+   Poll timeout 100 ms
+   Poll timeout 0 ms
+   Poll timeout 0 ms
+   Poll timeout 0 ms
+```
+
+## uploadはできる
+
+```
+dspace@mini:~$ dfu-util -U balckmagic_dfu.bin
+dfu-util 0.9
+
+Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
+Copyright 2010-2016 Tormod Volden and Stefan Schmidt
+This program is Free Software and has ABSOLUTELY NO WARRANTY
+Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
+
+Opening DFU capable USB device...
+ID 1d50:6017
+Run-time device DFU version 011a
+Claiming USB DFU Interface...
+Setting Alternate Setting #0 ...
+Determining device status: state = dfuIDLE, status = 0
+dfuIDLE, continuing
+DFU mode device DFU version 011a
+Device returned transfer size 1024
+Limiting default upload to 16384 bytes
+Upload	[=========================] 100%        16384 bytes
+Upload done.
+```
