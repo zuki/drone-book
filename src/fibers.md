@@ -60,7 +60,7 @@ assert_eq!(Pin::new(&mut fiber).resume(()), FiberState::Yielded(3));
 assert_eq!(Pin::new(&mut fiber).resume(()), FiberState::Complete(3));
 ```
 
-また、同等なファイバをRustのジェネレータこうbンを使って作成することもできます。
+また、同等なファイバをRustのジェネレータ構文を使って作成することもできます。
 
 ```rust
 let mut fiber = fib::new(|| {

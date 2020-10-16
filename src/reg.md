@@ -91,7 +91,7 @@ pub fn handler(reg: Regs, thr_init: ThrsInit) {
         gpio_idr: reg.gpio_idr,
         gpio_odr: reg.gpio_odr,
         // 以下は個々のフィールであることに注意
-        // 他のAPB2ペリフェラルは同じレジスタから別のフィールド取り出すことが可能
+        // この同じレジスタから他のAPB2ペリフェラルのフィールドを取り出すことも可能
         rcc_apb2enr_iopcen: reg.rcc_apb2enr.iopcen,
         rcc_apb2enr_iopcrst: reg.rcc_apb2enr.iopcrst,
         // ...
@@ -125,7 +125,7 @@ fn periph_gpio_c(reg: Regs) -> GpioC {
     }
 }
 
-fn periph_sys_tick(reg: Regs) -> GpioC {
+fn periph_sys_tick(reg: Regs) -> GpioC {    // -> SysTickの誤りか?
     SysTick {
         stk_ctrl: reg.stk_ctrl,
         stk_load: reg.stk_load,

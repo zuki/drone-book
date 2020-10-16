@@ -6,7 +6,7 @@
   - [Blue PillをBlack Magic Probeに](./bmp-from-bluepill.md)
   - [Hello, world!](./hello-world.md)
 - [Lチカ](./bluepill-blink.md)
-  - [全速動作](./bluepill-blink/full-speed.md)
+  - [最速動作](./bluepill-blink/full-speed.md)
   - [タイマー利用](./bluepill-blink/sys-tick.md)
 - [並行処理](./concurrency.md)
   - [ファイバ](./fibers.md)

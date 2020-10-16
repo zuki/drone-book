@@ -129,7 +129,7 @@ let uart_bytes = thr.uart.add_stream_ring(
 ```
 
 `add_stream_pulse`はストリーム（パルスチェネルの`rx`パート）を返し、これは
-ファイバが`fib::Yielded(Some(number))`または`fib::Complete(Some(number))
+ファイバが`fib::Yielded(Some(number))`または`fib::Complete(Some(number))`
 を返すたびに解決されます。
 
 ```rust
